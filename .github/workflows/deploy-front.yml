@@ -13,7 +13,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
-    # tu proyecto está en el subdirectorio
     defaults:
       run:
         working-directory: desarrollo2-catalogos-front
@@ -31,16 +30,11 @@ jobs:
 
       - name: Install deps
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build
         run: |
           npm run build
-          # Vite -> dist/ ; CRA -> build/
           if [ -d "dist" ]; then
             echo "BUILD_DIR=dist" >> $GITHUB_ENV
           elif [ -d "build" ]; then
@@ -61,22 +55,23 @@ jobs:
           name: frontend-dist
           path: frontend-dist
 
-      # ⇩⇩⇩ NUEVO: guardar la clave del Secret en un archivo y normalizar EOL
+      # Crear la clave en la RAÍZ del workspace, no en el subdir
       - name: Prep SSH key file
         shell: bash
+        working-directory: .        # <── importante
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
-          sed -i 's/\r$//' key.pem
-          chmod 600 key.pem
-          ls -l key.pem
-          head -n 2 key.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > "$GITHUB_WORKSPACE/key.pem"
+          sed -i 's/\r$//' "$GITHUB_WORKSPACE/key.pem"
+          chmod 600 "$GITHUB_WORKSPACE/key.pem"
+          ls -l "$GITHUB_WORKSPACE/key.pem"
+          head -n 2 "$GITHUB_WORKSPACE/key.pem"
 
       - name: Copy static assets to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: key.pem                 # usar archivo, NO 'key'
+          key_path: ${{ github.workspace }}/key.pem   # <── ruta absoluta
           source: "frontend-dist/*"
           target: "${{ secrets.EC2_PATH }}/dist"
           strip_components: 0
@@ -89,7 +84,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: key.pem                 # usar archivo acá también
+          key_path: ${{ github.workspace }}/key.pem   # <── misma ruta
           script: |
             set -e
             cd /home/ubuntu/catalogo
