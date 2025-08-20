@@ -55,14 +55,13 @@ jobs:
           name: frontend-dist
           path: frontend-dist
 
-      # Crear la clave en la RAÍZ del workspace, no en el subdir
       - name: Prep SSH key file
         shell: bash
-        working-directory: .        # <── importante
+        working-directory: .
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > "$GITHUB_WORKSPACE/key.pem"
           sed -i 's/\r$//' "$GITHUB_WORKSPACE/key.pem"
-          chmod 600 "$GITHUB_WORKSPACE/key.pem"
+          chmod 644 "$GITHUB_WORKSPACE/key.pem"   # <— antes 600; ahora legible en el contenedor
           ls -l "$GITHUB_WORKSPACE/key.pem"
           head -n 2 "$GITHUB_WORKSPACE/key.pem"
 
@@ -71,21 +70,26 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ${{ github.workspace }}/key.pem   # <── ruta absoluta
-          source: "frontend-dist/*"
+          key_path: ${{ github.workspace }}/key.pem
+          source: "desarrollo2-catalogos-front/${{ env.BUILD_DIR }}/**"
           target: "${{ secrets.EC2_PATH }}/dist"
           strip_components: 0
           overwrite: true
           rm: true
           timeout: 2m
 
-      - name: Restart Caddy on EC2
+      - name: Restart Caddy + verify files on EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key_path: ${{ github.workspace }}/key.pem   # <── misma ruta
+          key_path: ${{ github.workspace }}/key.pem
           script: |
             set -e
             cd /home/ubuntu/catalogo
             docker compose restart caddy
+            echo "== /home/ubuntu/catalogo/frontend/dist =="
+            ls -lah frontend/dist | head -n 50
+            echo "== /srv/frontend dentro de caddy =="
+            docker compose exec -T caddy sh -lc 'ls -lah /srv/frontend | head -n 50'
+
