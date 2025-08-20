@@ -12,6 +12,8 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
+    # tu proyecto está en el subdirectorio
     defaults:
       run:
         working-directory: desarrollo2-catalogos-front
@@ -59,26 +61,36 @@ jobs:
           name: frontend-dist
           path: frontend-dist
 
+      # ⇩⇩⇩ NUEVO: guardar la clave del Secret en un archivo y normalizar EOL
+      - name: Prep SSH key file
+        shell: bash
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+          sed -i 's/\r$//' key.pem
+          chmod 600 key.pem
+          ls -l key.pem
+          head -n 2 key.pem
+
       - name: Copy static assets to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: key.pem                 # usar archivo, NO 'key'
           source: "frontend-dist/*"
           target: "${{ secrets.EC2_PATH }}/dist"
           strip_components: 0
           overwrite: true
           rm: true
+          timeout: 2m
 
       - name: Restart Caddy on EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: key.pem                 # usar archivo acá también
           script: |
             set -e
             cd /home/ubuntu/catalogo
             docker compose restart caddy
-
