@@ -65,14 +65,14 @@ jobs:
           ls -l "$GITHUB_WORKSPACE/key.pem"
           head -n 2 "$GITHUB_WORKSPACE/key.pem"
 
-      - name: Copy static assets to EC2
+      - name: Copy static assets to EC2 (password auth)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key_path: ${{ github.workspace }}/key.pem
+          host: ${{secrets.EC2_HOST}}             # desarrollo2-catalogos.online
+          username: ci
+          password: ${{secrets.EC2_SSH_PASSWORD}}
           source: "desarrollo2-catalogos-front/${{ env.BUILD_DIR }}/**"
-          target: "${{ secrets.EC2_PATH }}/dist"
+          target: "/home/ubuntu/catalogo/frontend/dist"
           strip_components: 0
           overwrite: true
           rm: true
@@ -82,14 +82,13 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key_path: ${{ github.workspace }}/key.pem
+          username: ci
+          password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
             set -e
             cd /home/ubuntu/catalogo
-            docker compose restart caddy
+            sudo docker compose restart caddy
             echo "== /home/ubuntu/catalogo/frontend/dist =="
             ls -lah frontend/dist | head -n 50
-            echo "== /srv/frontend dentro de caddy =="
-            docker compose exec -T caddy sh -lc 'ls -lah /srv/frontend | head -n 50'
-
+            echo "== /srv/frontend inside caddy =="
+            sudo docker compose exec -T caddy sh -lc 'ls -lah /srv/frontend | head -n 50'
