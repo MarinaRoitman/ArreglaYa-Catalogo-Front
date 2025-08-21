@@ -49,10 +49,8 @@ jobs:
         working-directory: .
         run: |
           set -e
-          # Los secrets siempre se enmascaran en logs por GitHub, pero evitamos imprimirlos en claro igual.
           echo "EC2_HOST: ${{ secrets.EC2_HOST }}"
           echo "EC2_USER: ${{ secrets.EC2_USER }}"
-          # Password: solo longitud y hash truncado para confirmar que llegó
           if [ -z "${{ secrets.EC2_SSH_PASSWORD }}" ]; then
             echo "ERROR: Missing secret EC2_SSH_PASSWORD" >&2
             exit 1
@@ -65,12 +63,12 @@ jobs:
       - name: Copy static assets to EC2 (password auth)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}           # desarrollo2-catalogos.online
+          host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           source: "desarrollo2-catalogos-front/${{ env.BUILD_DIR }}/**"
           target: "/home/ubuntu/catalogo/frontend/dist"
-          strip_components: 0
+          strip_components: 2
           overwrite: true
           rm: true
           timeout: 2m
