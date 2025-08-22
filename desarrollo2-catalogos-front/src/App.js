@@ -31,7 +31,7 @@ function App() {
       />
 
       <p style={{ fontSize: "2.3rem", fontWeight: "bold", marginTop: "20px" }}>
-        SI TUVIERA UNO
+        SI TUVIERA UNO, O DOS
       </p>
     </div>
   );
