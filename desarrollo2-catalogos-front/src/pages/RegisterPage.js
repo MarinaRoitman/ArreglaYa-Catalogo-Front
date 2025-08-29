@@ -25,8 +25,11 @@ const RegisterPage = () => {
   };
 
   return (
-    <div>
-      <h2>Arregla Ya - Registro</h2>
+    <div className="form-container">
+      <div className="logo-container">
+        <h2>Arregla Ya</h2>
+        <p>Servicios a domicilio</p>
+      </div>
       <form onSubmit={handleSubmit}>
         <input type="text" name="nombre" placeholder="Nombre" value={formData.nombre} onChange={handleChange} required />
         <input type="text" name="apellido" placeholder="Apellido" value={formData.apellido} onChange={handleChange} required />
@@ -35,10 +38,10 @@ const RegisterPage = () => {
         <input type="text" name="usuario" placeholder="Usuario" value={formData.usuario} onChange={handleChange} required />
         <input type="password" name="contrasena" placeholder="Contraseña" value={formData.contrasena} onChange={handleChange} required />
         <input type="password" name="repitaContrasena" placeholder="Repita la Contraseña" value={formData.repitaContrasena} onChange={handleChange} required />
-        <button type="submit">Guardar</button>
-        <Link to="/login">
-          <button type="button">Cancelar</button>
-        </Link>
+        <div className="btn-container">
+          <button type="submit" className="btn btn-primary">Guardar</button>
+          <Link to="/login" className="btn btn-secondary">Cancelar</Link>
+        </div>
       </form>
     </div>
   );
