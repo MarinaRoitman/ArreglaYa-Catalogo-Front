@@ -39,18 +39,6 @@
   margin: 0;
 }
 
-/* Estilos para los campos de entrada */
-.form-container input {
-  width: 100%;
-  padding: 15px;
-  margin-bottom: 15px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background-color: #f9f9f9;
-  box-sizing: border-box; /**/
-  font-size: 16px;
-}
-
 .form-container input:focus {
   outline: none;
   border-color: #5d4037;
@@ -95,4 +83,66 @@
 
 .btn-secondary:hover {
   background-color: #f5f5f5;
+}
+
+/*form imput*/
+.form-input {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+
+/* Que los botones ocupen toda la fila */
+.full-width {
+  grid-column: span 2;
+}
+
+/* Grid general */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 10px;
+}
+
+/* Inputs y select iguales */
+.form-grid input,
+.form-grid select {
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  color: #5d4037d4;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: #8d6e63;
+  background-color: #fff;
+  box-shadow: 0 0 5px rgba(141, 110, 99, 0.3);
+}
+
+
+
+/* Botones */
+.btn-container {
+  grid-column: span 2;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Responsive: en móvil pasa a 1 columna */
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+
 }
