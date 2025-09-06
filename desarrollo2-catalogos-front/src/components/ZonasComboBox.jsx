@@ -10,7 +10,7 @@ required,
 const [options, setOptions] = useState([]);
 
 useEffect(() => {
-fetch("http://127.0.0.1:8000/zonas")
+fetch("http://127.0.0.1:8000/zonas/")
     .then((res) => res.json())
     .then((data) =>
     setOptions(
