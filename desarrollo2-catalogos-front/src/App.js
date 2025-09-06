@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import TrabajosPendientes from './pages/TrabajosPendientes';
+import Solicitudes from './pages/Solicitudes';
 
 import './App.css'; 
 
@@ -14,7 +14,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
-          <Route path="/TrabajosPendientes" element={<TrabajosPendientes />} />
+          <Route path="/Solicitudes" element={<Solicitudes />} />
         </Routes>
       </div>
     </Router>

@@ -5,8 +5,9 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
+import SolicitudesPersonas from "../SolicitudesPersonas.json"; 
 
-
+/*
 const JOBS_MOCK = Array.from({ length: 100 }).map((_, i) => ({
 id: i + 1,
 nombre: "Martina Fede",
@@ -16,10 +17,10 @@ fechaHora: i % 3 === 0 ? "27/08/2025 15hs" : "27/08/2025",
 servicio: "Electricista",
 habilidad: "Conectar luminarias",
 estado: "pendiente",
-}));
+}));*/
 
-export default function TrabajosPendientes() {
-const [data, setData] = useState(JOBS_MOCK);
+export default function Solicitudes() {
+const [data, setData] = useState(SolicitudesPersonas); 
 
 // filtros
 const [fNombre, setFNombre] = useState("");
@@ -74,7 +75,7 @@ return (
     }}
     >
     <Text fw={700} fz="xl" mb="md" ta="center">
-        Trabajos Pendientes
+        Solicitudes
     </Text>
 
     <Filterbar
@@ -107,7 +108,15 @@ return (
         <Text size="sm" c="dimmed">
         Página <Text span fw={700}>{page}</Text> de {totalPages}
         </Text>
-        <Pagination value={page} onChange={setPage} total={totalPages} />
+        <Pagination
+            value={page}
+            onChange={setPage}
+            total={totalPages}
+            color="#93755E"        
+            variant="filled"    
+            radius="md"
+            size="sm"
+            />
     </Group>
     </Box>
 </AppLayout>
