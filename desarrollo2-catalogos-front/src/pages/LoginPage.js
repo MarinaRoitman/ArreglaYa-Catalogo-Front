@@ -12,42 +12,59 @@ const LoginPage = () => {
   const handleChange = (e) =>
     setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          email: formData.usuario,
-          password: formData.contrasena,
-        }),
-      });
-      if (!res.ok) throw new Error("Credenciales inválidas");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        email: formData.usuario,
+        password: formData.contrasena,
+      }),
+    });
+    if (!res.ok) throw new Error("Credenciales inválidas");
 
-      const data = await res.json();
-      const token = data?.access_token || data?.token;
-      if (!token) throw new Error("Sin token");
-      localStorage.setItem("token", token);
+    const data = await res.json();
+    const token = data?.access_token || data?.token;
+    if (!token) throw new Error("Sin token");
 
-      // Pedimos el perfil y guardamos SOLO el nombre
-      const meRes = await fetch(`${BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        const soloNombre = (me?.nombre || "Usuario").toString().trim();
-        localStorage.setItem("userName", soloNombre);
-      } else {
-        localStorage.setItem("userName", (formData.usuario || "").split("@")[0] || "Usuario");
+    localStorage.removeItem("prestador_id");
+
+    localStorage.setItem("token", token);
+
+    const meRes = await fetch(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+
+    if (meRes.ok) {
+      const me = await meRes.json();
+
+      const prestadorId =
+        me?.prestador_id ??
+        me?.id ??
+        me?.user_id ??
+        me?.prestador?.id ?? 
+        null;
+
+      if (prestadorId != null) {
+        localStorage.setItem("prestador_id", String(prestadorId));
       }
 
-      navigate(from, { replace: true });
-    } catch (err) {
-      console.error(err);
-      alert("Error: Credenciales incorrectas, intentá de nuevo");
+
+      const soloNombre = (me?.nombre || "Usuario").toString().trim();
+      localStorage.setItem("userName", soloNombre);
+    } else {
+
+      localStorage.setItem("userName", (formData.usuario || "").split("@")[0] || "Usuario");
     }
-  };
+
+    navigate(from, { replace: true });
+  } catch (err) {
+    console.error(err);
+    alert("Error: Credenciales incorrectas, intentá de nuevo");
+  }
+};
 
   return (
     <div className="form-container">

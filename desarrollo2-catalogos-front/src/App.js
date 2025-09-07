@@ -4,6 +4,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Solicitudes from './pages/Solicitudes';
 import Habilidades from './pages/Habilidades';
+import Perfil from './pages/Perfil';
+
 import PrivateRoute from './PrivateRoutes';
 
 import './App.css'; 
@@ -16,23 +18,9 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
-          <Route
-            path="/solicitudes"
-            element={
-              <PrivateRoute>
-                <Solicitudes />
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/habilidades"
-            element={
-              <PrivateRoute>
-                <Habilidades />
-              </PrivateRoute>
-            }
-          />
+          <Route path="/solicitudes"element={<PrivateRoute><Solicitudes /></PrivateRoute>}/>
+          <Route path="/habilidades" element={<PrivateRoute><Habilidades /></PrivateRoute>}/>
+          <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>}/>
         </Routes>
       </div>
     </Router>

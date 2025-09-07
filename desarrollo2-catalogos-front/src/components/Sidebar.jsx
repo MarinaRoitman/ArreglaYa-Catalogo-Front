@@ -61,7 +61,13 @@ export default function Sidebar() {
       </ScrollArea>
 
       <Box p="md" style={{ borderTop: "1px solid var(--mantine-color-gray-3)", paddingBottom: 16 }}>
-        <NavLink label="Mi Perfil" leftSection={<IconUser size={18} />} mb={6} />
+        <NavLink 
+        label="Mi Perfil" 
+        leftSection={<IconUser size={18} />} mb={6} 
+        onClick={() => navigate("/perfil")}
+        active={pathname.startsWith("/perfil")}
+        />
+        
         <NavLink
           label="Log out"
           leftSection={<IconLogout size={18} />}
