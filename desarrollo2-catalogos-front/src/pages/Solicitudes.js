@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Box, Text, Group, Pagination, useMantineTheme } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
@@ -6,18 +6,7 @@ import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
 import SolicitudesPersonas from "../SolicitudesPersonas.json"; 
-
-/*
-const JOBS_MOCK = Array.from({ length: 100 }).map((_, i) => ({
-id: i + 1,
-nombre: "Martina Fede",
-telefono: "11-11111111",
-direccion: "Av. Siempre Viva 742",
-fechaHora: i % 3 === 0 ? "27/08/2025 15hs" : "27/08/2025",
-servicio: "Electricista",
-habilidad: "Conectar luminarias",
-estado: "pendiente",
-}));*/
+import ConfirmDelete from "../components/ModalBorrar";
 
 export default function Solicitudes() {
 const [data, setData] = useState(SolicitudesPersonas); 
@@ -51,14 +40,40 @@ return data.filter(
 const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
 
+useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+}, [page, totalPages]);
+
 const aprobar = (id) =>
 setData((prev) =>
     prev.map((r) => (r.id === id ? { ...r, estado: "aprobado" } : r))
 );
-const rechazar = (id) =>
-setData((prev) =>
-    prev.map((r) => (r.id === id ? { ...r, estado: "rechazado" } : r))
-);
+const [confirmOpen, setConfirmOpen] = useState(false);
+const [deletingId, setDeletingId] = useState(null);
+const [deleting, setDeleting] = useState(false);
+
+
+const askDelete = (id) => {
+setDeletingId(id);
+setConfirmOpen(true);
+};
+
+const confirmDelete = async () => {
+try {
+    setDeleting(true);
+    // si hubiera back: await api.delete(`/solicitudes/${deletingId}`)
+    setData((prev) => prev.filter((r) => r.id !== deletingId));
+    setConfirmOpen(false);
+    setDeletingId(null);
+} finally {
+    setDeleting(false);
+}
+};
+
+const cancelDelete = () => {
+setConfirmOpen(false);
+setDeletingId(null);
+};
 
 // responsive
 const theme = useMantineTheme();
@@ -98,10 +113,10 @@ return (
         <CardsMobile
         rows={pageData}
         aprobar={aprobar}
-        rechazar={rechazar}
+        rechazar={askDelete}
         />
     ) : (
-        <TableComponent rows={pageData} aprobar={aprobar} rechazar={rechazar} />
+        <TableComponent rows={pageData} aprobar={aprobar} rechazar={askDelete} />
     )}
 
     <Group justify="space-between" mt="md">
@@ -119,6 +134,12 @@ return (
             />
     </Group>
     </Box>
+    <ConfirmDelete
+        opened={confirmOpen}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+        loading={deleting}
+    />
 </AppLayout>
 );
 }

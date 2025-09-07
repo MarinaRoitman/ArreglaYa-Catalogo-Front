@@ -1,48 +1,51 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+
+const BASE_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    usuario: "",
-    contrasena: "",
-  });
+  const [formData, setFormData] = useState({ usuario: "", contrasena: "" });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/solicitudes";
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const handleChange = (e) =>
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           email: formData.usuario,
           password: formData.contrasena,
         }),
       });
+      if (!res.ok) throw new Error("Credenciales inválidas");
 
-      if (!response.ok) {
-        throw new Error("Credenciales inválidas");
+      const data = await res.json();
+      const token = data?.access_token || data?.token;
+      if (!token) throw new Error("Sin token");
+      localStorage.setItem("token", token);
+
+      // Pedimos el perfil y guardamos SOLO el nombre
+      const meRes = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        const soloNombre = (me?.nombre || "Usuario").toString().trim();
+        localStorage.setItem("userName", soloNombre);
+      } else {
+        localStorage.setItem("userName", (formData.usuario || "").split("@")[0] || "Usuario");
       }
 
-      const data = await response.json();
-      console.log("Login exitoso:", data);
-
-      localStorage.setItem("token", data.access_token);
-
-      alert("Usuario logueado con éxito");
-    } catch (error) {
-      console.error("Error en login:", error.message);
-
-      alert("Error: Credenciales incorrectas, intentalo de nuevo");
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error(err);
+      alert("Error: Credenciales incorrectas, intentá de nuevo");
     }
   };
 
@@ -52,6 +55,7 @@ const LoginPage = () => {
         <h2>Arregla Ya</h2>
         <p>Servicios a domicilio</p>
       </div>
+
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -60,6 +64,7 @@ const LoginPage = () => {
           value={formData.usuario}
           onChange={handleChange}
           required
+          autoComplete="username"
         />
         <input
           type="password"
@@ -68,14 +73,12 @@ const LoginPage = () => {
           value={formData.contrasena}
           onChange={handleChange}
           required
+          autoComplete="current-password"
         />
+
         <div className="btn-container">
-          <button type="submit" className="btn btn-primary">
-            Iniciar Sesión
-          </button>
-          <Link to="/registro" className="btn btn-secondary">
-            Registrarse
-          </Link>
+          <button type="submit" className="btn btn-primary">Iniciar Sesión</button>
+          <Link to="/registro" className="btn btn-secondary">Registrarse</Link>
         </div>
       </form>
     </div>

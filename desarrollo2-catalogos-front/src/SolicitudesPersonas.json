@@ -24,7 +24,7 @@
 "nombre": "Ana Gómez",
 "telefono": "11-31234567",
 "direccion": "Calle Belgrano 1200",
-"fechaHora": "28/08/2025",
+"fechaHora": "28/08/2025 15hs",
 "servicio": "Gasista",
 "habilidad": "Revisión de calefón",
 "estado": "pendiente"
@@ -44,7 +44,7 @@
 "nombre": "Sofía Martínez",
 "telefono": "11-55667788",
 "direccion": "Calle Mitre 450",
-"fechaHora": "30/08/2025",
+"fechaHora": "30/08/2025 18hs",
 "servicio": "Pintor",
 "habilidad": "Pintar dormitorio",
 "estado": "pendiente"

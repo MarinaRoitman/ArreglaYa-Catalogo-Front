@@ -32,7 +32,6 @@ return (
     title={<Text fw={800} fz="xl">Confirmar Solicitud</Text>}
 >
     <Stack gap="md">
-    {/* Cabecera elegante */}
     <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
         <Group gap="xs" justify="center">
         <ThemeIcon variant="light" radius="xl"><IconUser size={16} /></ThemeIcon>
@@ -57,7 +56,6 @@ return (
         </Group>
     </SimpleGrid>
 
-    {/* Detalle en un bloque suave */}
     <Paper withBorder radius="md" p="md" bg="var(--mantine-color-gray-0)">
         <Stack gap={6} ta="center">
         <Group gap={6} justify="center"><IconMapPin size={16} /><Text>{job?.direccion}</Text></Group>
@@ -68,7 +66,6 @@ return (
 
     <Divider />
 
-    {/* Inputs con íconos */}
     <Stack gap="sm">
         <TextInput
         placeholder="Tiempo estimado"
@@ -96,16 +93,15 @@ return (
         />
     </Stack>
 
-    {/* Botonera */}
     <Group justify="center" mt="sm">
-        <Button color="green" radius="md" onClick={() => isValid && onSubmit?.({
+        <Button color="#93755E" radius="md" onClick={() => isValid && onSubmit?.({
         id: job?.id,
         tiempoEstimado: tiempo.trim(),
         montoTotal: monto.trim(),
         })} disabled={!isValid}>
         Enviar
         </Button>
-        <Button color="red" variant="light" radius="md" onClick={onClose}>
+        <Button color="#a07353ff" variant="light" radius="md" onClick={onClose}>
         Cancelar
         </Button>
     </Group>
@@ -113,3 +109,4 @@ return (
 </Modal>
 );
 }
+

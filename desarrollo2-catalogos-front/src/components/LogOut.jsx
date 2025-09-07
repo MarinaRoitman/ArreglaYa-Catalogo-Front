@@ -11,14 +11,12 @@ return (
     radius="lg"
     withCloseButton={false}
     overlayProps={{ opacity: 0.35, blur: 2 }}
-    // título centrado
     title={
     <Text fw={800} fz="xl" ta="center" w="100%">
         Cerrar sesión
     </Text>
     }
 >
-    {/* contenido centrado */}
     <Stack gap="md" align="center">
     <Group gap="xs" justify="center">
         <IconLogout size={18} />
@@ -26,8 +24,8 @@ return (
     </Group>
 
     <Group justify="center" mt="sm">
-        <Button variant="light" onClick={onCancel}>Cancelar</Button>
-        <Button color="red" onClick={onConfirm} loading={loading}>
+        <Button variant="light" onClick={onCancel} color="#a07353ff">Cancelar</Button>
+        <Button color="#93755E"onClick={onConfirm} loading={loading}>
         Cerrar sesión
         </Button>
     </Group>
