@@ -5,32 +5,17 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
-import TrabajosPasados from "../Confirmados.json"; 
 
-const parseCustomDate = (dateString) => {
-  if (!dateString || !dateString.includes(' ')) return new Date('Invalid Date');
-  const [datePart, timePart] = dateString.split(' ');
-  const [day, month, year] = datePart.split('/');
-  const hour = timePart.replace('hs', '');
-  return new Date(`${year}-${month}-${day}T${hour}:00:00`);
-};
-
-export default function Realizados() {
-  // 1. Filtramos los datos para mostrar SOLO trabajos cuya fecha ya pasó
-  const [data] = useState(() => 
-    TrabajosPasados.filter(job => parseCustomDate(job.fechaHora) < new Date())
-  ); 
-
-  // La lógica de filtros y paginación no cambia
+// Recibe { data } como prop. Ya no importa su propio JSON.
+export default function Realizados({ data }) {
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
   const [fFecha, setFFecha] = useState("");
   const [fServ, setFServ] = useState("");
   const [fHab, setFHab] = useState("");
-
-  const pageSize = 10;
   const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const filtered = useMemo(() => {
     const match = (val, f) =>
@@ -72,15 +57,9 @@ export default function Realizados() {
           setPage={setPage}
         />
         {isMobile ? (
-          <CardsMobile
-            rows={pageData}
-            type="realizados" // 2. Indicamos el nuevo tipo
-          />
+          <CardsMobile rows={pageData} type="realizados" />
         ) : (
-          <TableComponent
-            rows={pageData}
-            type="realizados" // 2. Indicamos el nuevo tipo
-          />
+          <TableComponent rows={pageData} type="realizados" />
         )}
         <Group justify="space-between" mt="md">
           <Text size="sm" c="dimmed">

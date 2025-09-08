@@ -1,72 +1,86 @@
 [
-{
-"id": 1,
-"nombre": "Martina Fede",
-"telefono": "11-11111111",
-"direccion": "Av. Siempre Viva 742",
-"fechaHora": "27/08/2025 15hs",
-"servicio": "Electricista",
-"habilidad": "Conectar luminarias",
-"estado": "pendiente"
-},
-{
-"id": 2,
-"nombre": "Juan Pérez",
-"telefono": "11-23456789",
-"direccion": "Av. Libertador 3500",
-"fechaHora": "28/08/2025 10hs",
-"servicio": "Plomero",
-"habilidad": "Cambio de grifería",
-"estado": "pendiente"
-},
-{
-"id": 3,
-"nombre": "Ana Gómez",
-"telefono": "11-31234567",
-"direccion": "Calle Belgrano 1200",
-"fechaHora": "28/08/2025 15hs",
-"servicio": "Gasista",
-"habilidad": "Revisión de calefón",
-"estado": "pendiente"
-},
-{
-"id": 4,
-"nombre": "Luis Rodríguez",
-"telefono": "11-44556677",
-"direccion": "Av. Rivadavia 8000",
-"fechaHora": "29/08/2025 14hs",
-"servicio": "Albañil",
-"habilidad": "Reparación de pared",
-"estado": "pendiente"
-},
-{
-"id": 5,
-"nombre": "Sofía Martínez",
-"telefono": "11-55667788",
-"direccion": "Calle Mitre 450",
-"fechaHora": "30/08/2025 18hs",
-"servicio": "Pintor",
-"habilidad": "Pintar dormitorio",
-"estado": "pendiente"
-},
-{
-"id": 6,
-"nombre": "Carlos López",
-"telefono": "11-66778899",
-"direccion": "Boulevard San Martín 220",
-"fechaHora": "31/08/2025 09hs",
-"servicio": "Cerrajero",
-"habilidad": "Cambio de cerradura",
-"estado": "pendiente"
-},
-{
-"id": 7,
-"nombre": "Valentina Torres",
-"telefono": "11-77889900",
-"direccion": "Pasaje Sarmiento 55",
-"fechaHora": "01/09/2025 18hs",
-"servicio": "Técnico Aire Acondicionado",
-"habilidad": "Carga de gas",
-"estado": "pendiente"
-}
+  {
+    "id": 1,
+    "nombre": "Martina Fede",
+    "telefono": "11-1111-1111",
+    "direccion": "Av. Siempre Viva 742",
+    "fechaHora": "27/10/2026 15hs",
+    "servicio": "Electricista",
+    "habilidad": "Conectar luminarias",
+    "tiempoEstimado": null,
+    "montoTotal": null,
+    "clienteConfirmo": false
+  },
+  {
+    "id": 2,
+    "nombre": "Juan Pérez",
+    "telefono": "11-2345-6789",
+    "direccion": "Av. Libertador 3500",
+    "fechaHora": "28/11/2026 10hs",
+    "servicio": "Plomero",
+    "habilidad": "Cambio de grifería",
+    "tiempoEstimado": "2hs",
+    "montoTotal": 15000,
+    "clienteConfirmo": false
+  },
+  {
+    "id": 3,
+    "nombre": "Ana Gómez",
+    "telefono": "11-3123-4567",
+    "direccion": "Calle Belgrano 1200",
+    "fechaHora": "28/12/2026 15hs",
+    "servicio": "Gasista",
+    "habilidad": "Revisión de calefón",
+    "tiempoEstimado": "1hs",
+    "montoTotal": 8000,
+    "clienteConfirmo": true
+  },
+  {
+    "id": 4,
+    "nombre": "Luis Rodríguez",
+    "telefono": "11-4455-6677",
+    "direccion": "Av. Rivadavia 8000",
+    "fechaHora": "01/01/2020 14hs",
+    "servicio": "Albañil",
+    "habilidad": "Reparación de pared",
+    "tiempoEstimado": "4hs",
+    "montoTotal": 25000,
+    "clienteConfirmo": true
+  },
+  {
+    "id": 5,
+    "nombre": "Sofía Martínez",
+    "telefono": "11-5566-7788",
+    "direccion": "Calle Mitre 450",
+    "fechaHora": "01/01/2020 18hs",
+    "servicio": "Pintor",
+    "habilidad": "Pintar dormitorio",
+    "tiempoEstimado": "8hs",
+    "montoTotal": 40000,
+    "clienteConfirmo": false
+  },
+  {
+    "id": 6,
+    "nombre": "Carlos López",
+    "telefono": "11-6677-8899",
+    "direccion": "Boulevard San Martín 220",
+    "fechaHora": "15/10/2026 09hs",
+    "servicio": "Cerrajero",
+    "habilidad": "Cambio de cerradura",
+    "tiempoEstimado": null,
+    "montoTotal": null,
+    "clienteConfirmo": false
+  },
+  {
+    "id": 11,
+    "nombre": "Marta Sánchez",
+    "telefono": "11-4321-9876",
+    "direccion": "Calle Corrientes 348",
+    "fechaHora": "20/09/2026 10hs",
+    "servicio": "Técnico PC",
+    "habilidad": "Formatear disco",
+    "tiempoEstimado": null,
+    "montoTotal": null,
+    "clienteConfirmo": false
+  }
 ]
