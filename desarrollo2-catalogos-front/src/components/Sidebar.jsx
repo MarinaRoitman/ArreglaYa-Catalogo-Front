@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, ScrollArea, Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
-import { IconHome, IconListDetails, IconBolt, IconUser, IconLogout, IconChecks, IconRosetteDiscountCheckFilled } from "@tabler/icons-react";
+import { IconListDetails, IconBolt, IconUser, IconLogout, IconChecks, IconRosetteDiscountCheckFilled } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
 
@@ -39,7 +39,6 @@ export default function Sidebar() {
             <Text size="sm" fw={600}>¡Bienvenid@ {userName}!</Text>
           </Group>
 
-          <NavLink label="Trabajos" leftSection={<IconHome size={18} />} variant="filled" mt="md" />
           <NavLink
             label="Solicitudes"
             leftSection={<IconListDetails size={18} />}

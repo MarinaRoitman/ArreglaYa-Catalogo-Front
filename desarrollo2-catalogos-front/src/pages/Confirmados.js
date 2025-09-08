@@ -5,34 +5,21 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
-import ConfirmadosPersonas from "../Confirmados.json";
 
-// Pequeña función para convertir tu formato de fecha a una fecha real de JavaScript
-const parseCustomDate = (dateString) => {
-  const [datePart, timePart] = dateString.split(' ');
-  const [day, month, year] = datePart.split('/');
-  const hour = timePart.replace('hs', '');
-  return new Date(`${year}-${month}-${day}T${hour}:00:00`);
-};
-
-export default function Confirmados() {
-  // 1. Filtramos los datos INICIALES para excluir los trabajos que ya pasaron
-const data = useMemo(
-  () => ConfirmadosPersonas.filter(job => parseCustomDate(job.fechaHora) > new Date()),
-  []
-);
-
-  // El resto de la lógica de filtros y paginación no cambia
+// 1. El componente ahora recibe { data } como prop. ¡Ya no importa su propio JSON!
+export default function Confirmados({ data }) { 
+  
+  // La lógica de filtros y paginación se mantiene igual
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
   const [fFecha, setFFecha] = useState("");
   const [fServ, setFServ] = useState("");
   const [fHab, setFHab] = useState("");
-
-  const pageSize = 10;
   const [page, setPage] = useState(1);
+  const pageSize = 10;
 
+  // El filtro se aplica sobre la 'data' que llega por props desde App.js
   const filtered = useMemo(() => {
     const match = (val, f) =>
       String(val).toLowerCase().includes(f.trim().toLowerCase());
@@ -54,7 +41,7 @@ const data = useMemo(
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  // Esta función se puede usar en el futuro para calificar un trabajo finalizado
+  // Esta función es para el futuro, para cuando implementes la calificación
   const calificarTrabajo = (id) => {
     console.log(`Lógica para calificar el trabajo con ID: ${id}`);
     alert(`Calificar trabajo ID: ${id}`);

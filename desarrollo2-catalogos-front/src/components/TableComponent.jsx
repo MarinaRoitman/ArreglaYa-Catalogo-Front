@@ -42,7 +42,7 @@ export default function TableComponent({ rows = [], aprobar, rechazar, calificar
                 </>
               )}
 
-              <MC.Table.Th><MC.Text fw={600} fz="sm" ta="center">Acciones</MC.Text></MC.Table.Th>
+              <MC.Table.Th><MC.Text fw={600} fz="sm" ta="center">Estados</MC.Text></MC.Table.Th>
             </MC.Table.Tr>
           </MC.Table.Thead>
 
