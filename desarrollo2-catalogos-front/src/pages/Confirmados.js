@@ -17,9 +17,10 @@ const parseCustomDate = (dateString) => {
 
 export default function Confirmados() {
   // 1. Filtramos los datos INICIALES para excluir los trabajos que ya pasaron
-  const [data, setData] = useState(() => 
-    ConfirmadosPersonas.filter(job => parseCustomDate(job.fechaHora) > new Date())
-  ); 
+const data = useMemo(
+  () => ConfirmadosPersonas.filter(job => parseCustomDate(job.fechaHora) > new Date()),
+  []
+);
 
   // El resto de la lógica de filtros y paginación no cambia
   const [fNombre, setFNombre] = useState("");
