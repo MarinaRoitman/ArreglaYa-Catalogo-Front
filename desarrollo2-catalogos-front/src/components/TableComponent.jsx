@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import * as MC from "@mantine/core";
-import { IconCheck, IconX } from "@tabler/icons-react";
-import ConfirmarSolicitudModal from "../components/ModalSolicitud";
+import { IconCheck, IconX, IconClockHour4, IconCircleCheck } from "@tabler/icons-react";import ConfirmarSolicitudModal from "../components/ModalSolicitud";
 
-export default function TableComponent({ rows = [], aprobar, rechazar }) {
+export default function TableComponent({ rows = [], aprobar, rechazar, calificar, type = 'solicitudes' }) {
 const [confirmOpen, setConfirmOpen] = useState(false);
 const [selectedJob, setSelectedJob] = useState(null);
 
@@ -59,24 +58,41 @@ return (
             <MC.Table.Td>{row.servicio}</MC.Table.Td>
             <MC.Table.Td>{row.habilidad}</MC.Table.Td>
             <MC.Table.Td>
-                <MC.Group gap="xs" justify="center">
-                <MC.ActionIcon
-                    variant="light"
-                    color="teal"
-                    aria-label="Aprobar"
-                    onClick={() => openConfirm(row)}
-                >
+            <MC.Group gap="xs" justify="center">
+            {type === 'solicitudes' ? (
+                // Lógica para Solicitudes
+                <>
+                <MC.ActionIcon variant="light" color="teal" aria-label="Aprobar" onClick={() => openConfirm(row)}>
                     <IconCheck size={18} />
                 </MC.ActionIcon>
-                <MC.ActionIcon
-                    variant="light"
-                    color="red"
-                    aria-label="Rechazar"
-                    onClick={() => rechazar?.(row.id)}
-                >
+                <MC.ActionIcon variant="light" color="red" aria-label="Rechazar" onClick={() => rechazar?.(row.id)}>
                     <IconX size={18} />
                 </MC.ActionIcon>
-                </MC.Group>
+                </>
+            ) : type === 'confirmados' ? (
+                // Lógica para Confirmados
+                row.estado === 'confirmado' ? (
+                <MC.ActionIcon variant="light" color="green" aria-label="Confirmado">
+                    <IconCircleCheck size={18} />
+                </MC.ActionIcon>
+                ) : (
+                <MC.ActionIcon variant="light" color="blue" aria-label="Pendiente">
+                    <IconClockHour4 size={18} />
+                </MC.ActionIcon>
+                )
+            ) : (
+                // Lógica para Realizados (¡NUEVA!)
+                row.estado === 'confirmado' ? (
+                <MC.ActionIcon variant="light" color="green" aria-label="Realizado y Confirmado">
+                    <IconCircleCheck size={18} />
+                </MC.ActionIcon>
+                ) : (
+                <MC.ActionIcon variant="light" color="red" aria-label="No Confirmado">
+                    <IconX size={18} />
+                </MC.ActionIcon>
+                )
+            )}
+            </MC.Group>
             </MC.Table.Td>
             </MC.Table.Tr>
         ))}

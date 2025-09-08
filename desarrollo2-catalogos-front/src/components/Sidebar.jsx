@@ -47,9 +47,21 @@ export default function Sidebar() {
             onClick={() => navigate("/solicitudes")}
             active={pathname.startsWith("/solicitudes")}
           />
-          <NavLink label="Confirmados" leftSection={<IconChecks size={18} />}  mt="xs" />
-          <NavLink label="Realizados" leftSection={<IconRosetteDiscountCheckFilled size={18} />} mt="xs" />
-
+          <NavLink
+            label="Confirmados"
+            leftSection={<IconListDetails size={18} />}
+            mt="xs"
+            onClick={() => navigate("/confirmados")}
+            active={pathname.startsWith("/confirmados")}
+          />          
+          
+          <NavLink
+            label="Realizados"
+            leftSection={<IconListDetails size={18} />}
+            mt="xs"
+            onClick={() => navigate("/realizados")}
+            active={pathname.startsWith("/realizados")}
+          />   
           <Divider my="md" />
           <NavLink
             label="Habilidades"

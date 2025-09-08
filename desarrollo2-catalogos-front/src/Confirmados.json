@@ -1,0 +1,72 @@
+[
+{
+    "id": 1,
+    "nombre": "Martina Fede",
+    "telefono": "11-11111111",
+    "direccion": "Av. Siempre Viva 742",
+    "fechaHora": "27/08/2026 15hs",
+    "servicio": "Electricista",
+    "habilidad": "Conectar luminarias",
+    "estado": "confirmado" 
+  },
+  {
+    "id": 2,
+    "nombre": "Juan Pérez",
+    "telefono": "11-23456789",
+    "direccion": "Av. Libertador 3500",
+    "fechaHora": "28/08/2026 10hs",
+    "servicio": "Plomero",
+    "habilidad": "Cambio de grifería",
+    "estado": "pendiente" 
+  },
+  {
+    "id": 3,
+    "nombre": "Dante Perez",
+    "telefono": "11-31234567",
+    "direccion": "Calle Falsa 123",
+    "fechaHora": "01/01/2026 15hs",
+    "servicio": "Gasista",
+    "habilidad": "Revisión de calefón",
+    "estado": "confirmado"
+  },
+{
+"id": 4,
+"nombre": "Luis Rodríguez",
+"telefono": "11-44556677",
+"direccion": "Av. Rivadavia 8000",
+"fechaHora": "29/08/2025 14hs",
+"servicio": "Albañil",
+"habilidad": "Reparación de pared",
+"estado": "confirmado"
+},
+{
+"id": 5,
+"nombre": "Sofía Martínez",
+"telefono": "11-55667788",
+"direccion": "Calle Mitre 450",
+"fechaHora": "30/08/2025 18hs",
+"servicio": "Pintor",
+"habilidad": "Pintar dormitorio",
+"estado": "confirmado"
+},
+{
+"id": 6,
+"nombre": "Carlos López",
+"telefono": "11-66778899",
+"direccion": "Boulevard San Martín 220",
+"fechaHora": "31/08/2025 09hs",
+"servicio": "Cerrajero",
+"habilidad": "Cambio de cerradura",
+"estado": "pendiente"
+},
+{
+"id": 7,
+"nombre": "Valentina Torres",
+"telefono": "11-77889900",
+"direccion": "Pasaje Sarmiento 55",
+"fechaHora": "01/09/2026 18hs",
+"servicio": "Técnico Aire Acondicionado",
+"habilidad": "Carga de gas",
+"estado": "pendiente"
+}
+]
