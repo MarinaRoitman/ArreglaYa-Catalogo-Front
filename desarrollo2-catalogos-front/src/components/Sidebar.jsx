@@ -46,21 +46,24 @@ export default function Sidebar() {
             mt="xs"
             onClick={() => navigate("/solicitudes")}
             active={pathname.startsWith("/solicitudes")}
+            color="#b67747ff"
           />
           <NavLink
             label="Confirmados"
-            leftSection={<IconListDetails size={18} />}
+            leftSection={<IconChecks size={18} />}
             mt="xs"
             onClick={() => navigate("/confirmados")}
             active={pathname.startsWith("/confirmados")}
+            color="#b67747ff"
           />          
           
           <NavLink
             label="Realizados"
-            leftSection={<IconListDetails size={18} />}
+            leftSection={<IconRosetteDiscountCheckFilled size={18} />}
             mt="xs"
             onClick={() => navigate("/realizados")}
             active={pathname.startsWith("/realizados")}
+            color="#b67747ff"
           />   
           <Divider my="md" />
           <NavLink
@@ -68,6 +71,7 @@ export default function Sidebar() {
             leftSection={<IconBolt size={18} />}
             onClick={() => navigate("/habilidades")}
             active={pathname.startsWith("/habilidades")}
+            color="#b67747ff"
           />
         </Box>
       </ScrollArea>
@@ -78,6 +82,7 @@ export default function Sidebar() {
         leftSection={<IconUser size={18} />} mb={6} 
         onClick={() => navigate("/perfil")}
         active={pathname.startsWith("/perfil")}
+        color="#b67747ff"
         />
         
         <NavLink
