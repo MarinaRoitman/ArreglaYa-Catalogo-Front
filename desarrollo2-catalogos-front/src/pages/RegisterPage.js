@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import FormComboBox from '../components/ZonasComboBox';
 import { API_URL } from '../Api/api';
 import '../../src/Form.css';
 
 const RegisterPage = () => {
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     nombre: '',
