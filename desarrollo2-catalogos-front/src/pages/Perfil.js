@@ -8,7 +8,6 @@ TextInput,
 Button,
 Divider,
 Rating,
-Progress,
 Avatar,
 LoadingOverlay,
 Modal,
@@ -18,11 +17,17 @@ import { IconCircleCheck } from "@tabler/icons-react";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Select from "react-select";
 import { fetchZonas } from "../Api/zonas";
-import {   getPrestadorById, updatePrestador,
-  addZonaToPrestador,
-  removeZonaFromPrestador, } from "../Api/prestadores";
+import {
+getPrestadorById,
+updatePrestador,
+addZonaToPrestador,
+removeZonaFromPrestador,
+} from "../Api/prestadores";
+import { listCalificaciones } from "../Api/calificacion";
+import { getUsuarioById } from "../Api/usuarios"; // 🔹 nuevo helper para traer usuario
 
 export default function Perfil() {
+const [reviews, setReviews] = useState([]);
 const [zonas, setZonas] = useState([]);
 const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 
@@ -43,17 +48,7 @@ const [saving, setSaving] = useState(false);
 const [successOpen, setSuccessOpen] = useState(false);
 const [error, setError] = useState("");
 
-// mock reviews
-const reviews = useMemo(
-() => [
-    { name: "Ana", text: "Muy buen trabajo, excelente atención.", rating: 5 },
-    { name: "Lucía", text: "Cumplió con lo pactado, muy recomendable.", rating: 3.5 },
-    { name: "Carlos", text: "Profesional y puntual.", rating: 5 },
-],
-[]
-);
-
-// cargar datos del prestador y zonas
+// cargar datos del prestador, zonas y calificaciones
 useEffect(() => {
 const load = async () => {
     try {
@@ -61,15 +56,19 @@ const load = async () => {
     setError("");
 
     const prestadorId = localStorage.getItem("prestador_id");
-    if (!prestadorId) throw new Error("No se encontró prestador_id en localStorage");
+    if (!prestadorId)
+        throw new Error("No se encontró prestador_id en localStorage");
 
-    const [zonasRes, prestador] = await Promise.all([
+    const [zonasRes, prestador, calificaciones] = await Promise.all([
         fetchZonas(),
         getPrestadorById(prestadorId),
+        listCalificaciones(),
     ]);
 
+    // 🔹 set zonas
     setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
 
+    // 🔹 set datos básicos
     setForm({
         nombre: prestador.nombre || "",
         apellido: prestador.apellido || "",
@@ -83,7 +82,31 @@ const load = async () => {
         (prestador.zonas || []).map((z) => ({ value: z.id, label: z.nombre }))
     );
 
-    setHabilidades(prestador.habilidades || []); // 🔹 guardamos habilidades del prestador
+    setHabilidades(prestador.habilidades || []);
+
+    // 🔹 filtrar calificaciones por prestador_id
+    const calificacionesPrestador = calificaciones.filter(
+        (c) => String(c.id_prestador) === String(prestadorId)
+    );
+
+    // 🔹 enriquecer calificaciones con nombre de usuario
+    const reviewsConUsuarios = await Promise.all(
+        calificacionesPrestador.map(async (c) => {
+        try {
+            const usuario = await getUsuarioById(c.id_usuario);
+            return {
+            ...c,
+            nombre_usuario: `${usuario?.nombre || "Usuario"} ${
+                usuario?.apellido || ""
+            }`.trim(),
+            };
+        } catch {
+            return { ...c, nombre_usuario: `Usuario #${c.id_usuario}` };
+        }
+        })
+    );
+
+    setReviews(reviewsConUsuarios);
     } catch (err) {
     setError(err.message || "Error al cargar el perfil");
     } finally {
@@ -100,51 +123,49 @@ setForm((prev) => ({ ...prev, [key]: val }));
 };
 
 const handleSubmit = async () => {
-  try {
+try {
     setSaving(true);
     const prestadorId = localStorage.getItem("prestador_id");
     if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    // 1. Actualizar datos básicos (con payload filtrado)
     const payload = {
-      nombre: form.nombre,
-      apellido: form.apellido,
-      direccion: form.direccion,
-      email: form.email,
-      telefono: form.telefono,
-      activo: true,
+    nombre: form.nombre,
+    apellido: form.apellido,
+    direccion: form.direccion,
+    email: form.email,
+    telefono: form.telefono,
+    activo: true,
     };
 
     Object.keys(payload).forEach((k) => {
-      if (payload[k] === "" || payload[k] == null) {
+    if (payload[k] === "" || payload[k] == null) {
         delete payload[k];
-      }
+    }
     });
 
     await updatePrestador(prestadorId, payload);
 
-    // 2. Sincronizar zonas
     const zonasActuales = (habilidades?.zonas || []).map((z) => z.id);
     const zonasSeleccionadasIds = zonasSeleccionadas.map((z) => z.value);
 
     for (const id of zonasSeleccionadasIds) {
-      if (!zonasActuales.includes(id)) {
+    if (!zonasActuales.includes(id)) {
         await addZonaToPrestador(prestadorId, id);
-      }
+    }
     }
 
     for (const id of zonasActuales) {
-      if (!zonasSeleccionadasIds.includes(id)) {
+    if (!zonasSeleccionadasIds.includes(id)) {
         await removeZonaFromPrestador(prestadorId, id);
-      }
+    }
     }
 
     setSuccessOpen(true);
-  } catch (err) {
+} catch (err) {
     setError(err.message || "Error al guardar cambios");
-  } finally {
+} finally {
     setSaving(false);
-  }
+}
 };
 
 // 🔹 Filtrar habilidades
@@ -222,27 +243,12 @@ return (
                 Zonas
                 </label>
                 <Select
-                    isMulti
-                    options={zonas}
-                    placeholder="Seleccioná zonas"
-                    value={zonasSeleccionadas}
-                    onChange={(opts) => setZonasSeleccionadas(opts || [])}
-                    styles={{
-                        option: (provided) => ({
-                        ...provided,
-                        fontSize: "14px", // tamaño de la letra en las opciones
-                        fontFamily: "Arial, sans-serif", // fuente
-                        }),
-                        multiValueLabel: (provided) => ({
-                        ...provided,
-                        fontSize: "12px", // tamaño de la letra en los chips seleccionados
-                        }),
-                        placeholder: (provided) => ({
-                        ...provided,
-                        fontSize: "14px", // tamaño de la letra del placeholder
-                        }),
-                    }}
-                    />
+                isMulti
+                options={zonas}
+                placeholder="Seleccioná zonas"
+                value={zonasSeleccionadas}
+                onChange={(opts) => setZonasSeleccionadas(opts || [])}
+                />
             </Box>
             <TextInput
                 label="Dirección"
@@ -266,8 +272,6 @@ return (
             </Group>
 
             <Divider my="sm" label="Tus Habilidades" labelPosition="center" />
-
-            {/* 🔹 buscador */}
             <TextInput
             placeholder="Buscar habilidad"
             mb="sm"
@@ -275,7 +279,6 @@ return (
             onChange={(e) => setFiltro(e.target.value)}
             />
 
-            {/* 🔹 listado de habilidades */}
             <Box
             mih={100}
             mb="md"
@@ -294,7 +297,9 @@ return (
                     borderBottom: "1px solid #eee",
                     }}
                 >
-                    <Text fw={500} style={{ fontSize: 14 }}>{h.nombre}</Text>
+                    <Text fw={500} style={{ fontSize: 14 }}>
+                    {h.nombre}
+                    </Text>
                     <Text fz="xs" c="dimmed">
                     {h.nombre_rubro}
                     </Text>
@@ -309,41 +314,47 @@ return (
         <Grid.Col span={{ base: 12, md: 5 }}>
         <Box p="lg" bg="white" style={{ borderRadius: 16 }}>
             <Text fw={600} fz="lg" mb="md" ta="center">
-            Calificación
+            Calificaciones
             </Text>
-            <Group justify="center" mb="sm">
-            <Text fz="xl" fw={700}>
-                5.0
-            </Text>
-            <Rating value={5} readOnly />
+            <Group justify="center" mb="md">
+            <Rating
+                value={
+                reviews.length > 0
+                    ? reviews.reduce((sum, r) => sum + (r.estrellas || 0), 0) /
+                    reviews.length
+                    : 0
+                }
+                readOnly
+            />
             </Group>
+
             <Text ta="center" mb="md">
-            (3 Reviews)
+            ({reviews.length} Reviews)
             </Text>
-            <Box mb="lg">
-            {[5, 4, 3, 2, 1].map((s) => (
-                <Group key={s} spacing="xs" mb={4}>
-                <Text w={20}>{s}</Text>
-                <Progress value={s * 15} w="100%" color="#93755E" />
-                </Group>
-            ))}
-            </Box>
+
             <Divider my="sm" />
+
             <Box style={{ maxHeight: 300, overflowY: "auto" }}>
-            {reviews.map((r, i) => (
-                <Box key={i} mb="md">
-                <Group>
-                    <Avatar radius="xl" color="#93755E">
-                    {r.name[0]}
-                    </Avatar>
-                    <Text fw={600}>{r.name}</Text>
-                    <Rating value={r.rating} readOnly size="sm" />
-                </Group>
-                <Text fz="sm" c="dimmed" mt={4}>
-                    {r.text}
+            {reviews.length === 0 ? (
+                <Text fz="sm" c="dimmed">
+                Este prestador aún no tiene calificaciones
                 </Text>
+            ) : (
+                reviews.map((r) => (
+                <Box key={r.id} mb="md">
+                    <Group>
+                    <Avatar radius="xl" color="#93755E">
+                        {r.nombre_usuario ? r.nombre_usuario[0] : "U"}
+                    </Avatar>
+                    <Text fw={600}>{r.nombre_usuario}</Text>
+                    <Rating value={r.estrellas} readOnly size="sm" />
+                    </Group>
+                    <Text fz="sm" c="dimmed" mt={4}>
+                    {r.descripcion || "Sin comentario"}
+                    </Text>
                 </Box>
-            ))}
+                ))
+            )}
             </Box>
         </Box>
         </Grid.Col>
