@@ -32,6 +32,21 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
+      # ======= NUEVO: tests gate =======
+      - name: Run tests (Jest/Vitest)
+        env:
+          CI: true
+        run: |
+          # Si tenés script "test", lo ejecuta. Con CRA/Jest usamos --watchAll=false.
+          if npm run | grep -q "^  test$"; then
+            # CRA/Jest
+            npm test -- --watchAll=false --passWithNoTests
+          else
+            # fallback por si usás Vitest u otro runner
+            npm run test --if-present --silent
+          fi
+      # ======= fin tests gate =======
+
       - name: Build
         run: |
           npm run build
@@ -43,7 +58,6 @@ jobs:
             echo "No dist/ or build/ directory found" && exit 1
           fi
 
-      # ✅ Comprobación segura de secrets (sin mostrarlos en claro)
       - name: Debug secrets (masked)
         shell: bash
         working-directory: .
