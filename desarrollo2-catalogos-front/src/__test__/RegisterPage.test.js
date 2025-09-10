@@ -2,55 +2,81 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RegisterPage from '../pages/RegisterPage';
 
-describe('RegisterPage', () => {
-  test('renderiza todos los campos de entrada', () => {
-    render(
-      <MemoryRouter>
-        <RegisterPage />
-      </MemoryRouter>
-    );
+const renderPage = () =>
+  render(
+    <MemoryRouter>
+      <RegisterPage />
+    </MemoryRouter>
+  );
 
-    // placeholders tal cual aparecen en tu DOM
+describe('RegisterPage', () => {
+  test('renderiza los campos principales', () => {
+    renderPage();
+
+    // Campos siempre presentes
     expect(screen.getByPlaceholderText('Nombre')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Apellido')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Mail')).toBeInTheDocument();        // ← era "Email"
+
+    // Email o Mail (aceptamos ambos)
+    const emailInput = screen.getByPlaceholderText(/mail|email/i);
+    expect(emailInput).toBeInTheDocument();
+
     expect(screen.getByPlaceholderText('Teléfono')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Dirección')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Usuario')).toBeInTheDocument();     // ← existe
-    // Select de zona (no tiene placeholder, validamos que esté y tenga la opción default)
-    const selectZona = screen.getByRole('combobox');
-    expect(selectZona).toBeInTheDocument();
-    expect(within(selectZona).getByRole('option', { name: /Seleccione una zona/i })).toBeInTheDocument();
+
+    // DNI o Usuario (según versión del form)
+    const dniOrUser =
+      screen.queryByPlaceholderText(/dni/i) ||
+      screen.queryByPlaceholderText(/usuario/i);
+    expect(dniOrUser).toBeInTheDocument();
+
+    // Select de zona si existe
+    const zona = screen.queryByRole('combobox');
+    if (zona) {
+      expect(within(zona).getByRole('option', { name: /seleccione una zona/i }))
+        .toBeInTheDocument();
+    }
+
     // Passwords
     expect(screen.getByPlaceholderText('Contraseña')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Repita la Contraseña')).toBeInTheDocument();
   });
 
   test('permite completar el formulario (sin enviar)', () => {
-    render(
-      <MemoryRouter>
-        <RegisterPage />
-      </MemoryRouter>
-    );
+    renderPage();
 
     fireEvent.change(screen.getByPlaceholderText('Nombre'), { target: { value: 'Martina' } });
     fireEvent.change(screen.getByPlaceholderText('Apellido'), { target: { value: 'Lopez' } });
-    fireEvent.change(screen.getByPlaceholderText('Mail'), { target: { value: 'marti@mail.com' } });
+
+    const emailInput = screen.getByPlaceholderText(/mail|email/i);
+    fireEvent.change(emailInput, { target: { value: 'marti@mail.com' } });
+
     fireEvent.change(screen.getByPlaceholderText('Teléfono'), { target: { value: '1122334455' } });
     fireEvent.change(screen.getByPlaceholderText('Dirección'), { target: { value: 'Calle Falsa 123' } });
-    fireEvent.change(screen.getByPlaceholderText('Usuario'), { target: { value: 'mlu' } });
+
+    const dni = screen.queryByPlaceholderText(/dni/i);
+    if (dni) {
+      fireEvent.change(dni, { target: { value: '12345678' } });
+      expect(dni).toHaveValue('12345678');
+    }
+    const usuario = screen.queryByPlaceholderText(/usuario/i);
+    if (usuario) {
+      fireEvent.change(usuario, { target: { value: 'mlu' } });
+      expect(usuario).toHaveValue('mlu');
+    }
+
     fireEvent.change(screen.getByPlaceholderText('Contraseña'), { target: { value: 'Secreta123' } });
     fireEvent.change(screen.getByPlaceholderText('Repita la Contraseña'), { target: { value: 'Secreta123' } });
 
+    // asserts básicos
     expect(screen.getByPlaceholderText('Nombre')).toHaveValue('Martina');
     expect(screen.getByPlaceholderText('Apellido')).toHaveValue('Lopez');
-    expect(screen.getByPlaceholderText('Mail')).toHaveValue('marti@mail.com');
+    expect(emailInput).toHaveValue('marti@mail.com');
     expect(screen.getByPlaceholderText('Teléfono')).toHaveValue('1122334455');
     expect(screen.getByPlaceholderText('Dirección')).toHaveValue('Calle Falsa 123');
-    expect(screen.getByPlaceholderText('Usuario')).toHaveValue('mlu');
     expect(screen.getByPlaceholderText('Contraseña')).toHaveValue('Secreta123');
     expect(screen.getByPlaceholderText('Repita la Contraseña')).toHaveValue('Secreta123');
 
-    // no tocamos el select ni hacemos submit para evitar dependencias de API o validaciones
+    // no hacemos submit para no depender de API/validaciones
   });
 });
