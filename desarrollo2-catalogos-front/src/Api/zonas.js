@@ -1,21 +1,47 @@
+export const API_URL = "https://api.desarrollo2-catalogos.online";
+
+// función que obtiene el token actual
+function getAuthHeaders() {
+const token = localStorage.getItem("token");
+return {
+Authorization: `Bearer ${token}`,
+"Content-Type": "application/json",
+};
+}
+
+// ===================
+// GET todas las zonas
+// ===================
 export async function fetchZonas() {
-try {
-const response = await fetch("https://api.desarrollo2-catalogos.online/zonas/", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
+const res = await fetch(`${API_URL}/zonas/`, {
+method: "GET",
+headers: getAuthHeaders(),
 });
-
-if (!response.ok) {
-    throw new Error("Error al obtener zonas");
+if (!res.ok) throw new Error(`Error GET zonas: ${res.status}`);
+return res.json();
 }
 
-const data = await response.json();
-return data.map((zona) => ({
-    value: zona.id.toString(),
-    label: zona.nombre,
-}));
-} catch (error) {
-console.error("Error fetching zonas:", error);
-return [];
+// ===================
+// POST crear zona
+// ===================
+export async function createZona(nombre) {
+const res = await fetch(`${API_URL}/zonas/`, {
+method: "POST",
+headers: getAuthHeaders(),
+body: JSON.stringify({ nombre }),
+});
+if (!res.ok) throw new Error(`Error POST zona: ${res.status}`);
+return res.json();
 }
+
+// ===================
+// DELETE eliminar zona
+// ===================
+export async function deleteZona(id) {
+const res = await fetch(`${API_URL}/zonas/${id}`, {
+method: "DELETE",
+headers: getAuthHeaders(),
+});
+if (!res.ok) throw new Error(`Error DELETE zona: ${res.status}`);
+return res.json();
 }

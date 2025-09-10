@@ -8,43 +8,28 @@ TextInput,
 Button,
 Divider,
 Rating,
-Progress,
 Avatar,
 LoadingOverlay,
+Modal,
 Alert,
 } from "@mantine/core";
-import { Modal } from "@mantine/core";
 import { IconCircleCheck } from "@tabler/icons-react";
 import AppLayout from "../components/LayoutTrabajosPendientes";
-import { fetchZonas } from "../Api/zonas";
 import Select from "react-select";
-import { getPrestadorById, updatePrestador } from "../Api/prestadores";
-
-function ensurePrestadorIdFromTokenLocal() {
-const existing = localStorage.getItem("prestador_id");
-if (existing && !Number.isNaN(parseInt(existing, 10))) {
-return parseInt(existing, 10);
-}
-const token = localStorage.getItem("token");
-if (!token) return null;
-
-try {
-const [, payload] = token.split(".");
-if (!payload) return null;
-const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-const cand = json?.prestador_id ?? json?.user_id ?? json?.id ?? json?.sub;
-const id = typeof cand === "string" ? parseInt(cand, 10) : Number(cand);
-if (Number.isFinite(id)) {
-    localStorage.setItem("prestador_id", String(id));
-    return id;
-}
-} catch {}
-return null;
-}
+import { fetchZonas } from "../Api/zonas";
+import {
+getPrestadorById,
+updatePrestador,
+addZonaToPrestador,
+removeZonaFromPrestador,
+} from "../Api/prestadores";
+import { listCalificaciones } from "../Api/calificacion";
+import { getUsuarioById } from "../Api/usuarios"; // 🔹 nuevo helper para traer usuario
 
 export default function Perfil() {
+const [reviews, setReviews] = useState([]);
 const [zonas, setZonas] = useState([]);
-const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
+const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 
 const [form, setForm] = useState({
 nombre: "",
@@ -52,59 +37,83 @@ apellido: "",
 email: "",
 direccion: "",
 telefono: "",
-id_zona: null,
+dni: "",
 });
 
-const [loading, setLoading] = useState(true);
+const [habilidades, setHabilidades] = useState([]);
+const [filtro, setFiltro] = useState("");
+
+const [loading, setLoading] = useState(false);
 const [saving, setSaving] = useState(false);
-const [error, setError] = useState("");
 const [successOpen, setSuccessOpen] = useState(false);
+const [error, setError] = useState("");
 
-const reviews = useMemo(
-() => [
-    { name: "Ana", text: "Muy buen trabajo, excelente atención.", rating: 5 },
-    { name: "Lucía", text: "Cumplió con lo pactado, muy recomendable.", rating: 3.5 },
-    { name: "Carlos", text: "Profesional y puntual.", rating: 5 },
-],
-[]
-);
-
-// Carga zonas + datos del prestador logueado
+// cargar datos del prestador, zonas y calificaciones
 useEffect(() => {
 const load = async () => {
+    try {
     setLoading(true);
     setError("");
-    try {
-    const zones = await fetchZonas(); // Debe devolver [{value,label}, ...]
-    setZonas(zones);
 
-    // 1) Intentar leer prestador_id guardado
-    // 2) Si falta, derivarlo del token (sin mostrarlo en UI)
-    let prestadorId = localStorage.getItem("prestador_id");
-    prestadorId = prestadorId ? parseInt(prestadorId, 10) : null;
-    if (!prestadorId) prestadorId = ensurePrestadorIdFromTokenLocal();
-    if (!prestadorId) throw new Error("Falta prestador_id. Iniciá sesión de nuevo.");
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId)
+        throw new Error("No se encontró prestador_id en localStorage");
 
-    const data = await getPrestadorById(prestadorId);
+    const [zonasRes, prestador, calificaciones] = await Promise.all([
+        fetchZonas(),
+        getPrestadorById(prestadorId),
+        listCalificaciones(),
+    ]);
 
+    // 🔹 set zonas
+    setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
+
+    // 🔹 set datos básicos
     setForm({
-        nombre: data?.nombre || "",
-        apellido: data?.apellido || "",
-        email: data?.email || "",
-        direccion: data?.direccion || "",
-        telefono: data?.telefono || "",
-        id_zona: data?.id_zona ?? null,
+        nombre: prestador.nombre || "",
+        apellido: prestador.apellido || "",
+        email: prestador.email || "",
+        direccion: prestador.direccion || "",
+        telefono: prestador.telefono || "",
+        dni: prestador.dni || "",
     });
 
-    setZonaSeleccionada(
-        data?.id_zona ? zones.find((z) => z.value === data.id_zona) || null : null
+    setZonasSeleccionadas(
+        (prestador.zonas || []).map((z) => ({ value: z.id, label: z.nombre }))
     );
-    } catch (e) {
-    setError(e.message || "Error cargando el perfil.");
+
+    setHabilidades(prestador.habilidades || []);
+
+    // 🔹 filtrar calificaciones por prestador_id
+    const calificacionesPrestador = calificaciones.filter(
+        (c) => String(c.id_prestador) === String(prestadorId)
+    );
+
+    // 🔹 enriquecer calificaciones con nombre de usuario
+    const reviewsConUsuarios = await Promise.all(
+        calificacionesPrestador.map(async (c) => {
+        try {
+            const usuario = await getUsuarioById(c.id_usuario);
+            return {
+            ...c,
+            nombre_usuario: `${usuario?.nombre || "Usuario"} ${
+                usuario?.apellido || ""
+            }`.trim(),
+            };
+        } catch {
+            return { ...c, nombre_usuario: `Usuario #${c.id_usuario}` };
+        }
+        })
+    );
+
+    setReviews(reviewsConUsuarios);
+    } catch (err) {
+    setError(err.message || "Error al cargar el perfil");
     } finally {
     setLoading(false);
     }
 };
+
 load();
 }, []);
 
@@ -114,39 +123,60 @@ setForm((prev) => ({ ...prev, [key]: val }));
 };
 
 const handleSubmit = async () => {
-setSaving(true);
-setError("");
 try {
-    let prestadorId = localStorage.getItem("prestador_id");
-    prestadorId = prestadorId ? parseInt(prestadorId, 10) : null;
-    if (!prestadorId) prestadorId = ensurePrestadorIdFromTokenLocal();
-    if (!prestadorId) throw new Error("No se detectó sesión. Iniciá nuevamente.");
+    setSaving(true);
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró prestador_id");
 
     const payload = {
-    nombre: form.nombre?.trim(),
-    apellido: form.apellido?.trim(),
-    direccion: form.direccion?.trim(),
-    email: form.email?.trim(),
-    telefono: form.telefono?.trim(),
-    id_zona: zonaSeleccionada ? zonaSeleccionada.value : null,
+    nombre: form.nombre,
+    apellido: form.apellido,
+    direccion: form.direccion,
+    email: form.email,
+    telefono: form.telefono,
+    activo: true,
     };
 
-    const updated = await updatePrestador(prestadorId, payload);
+    Object.keys(payload).forEach((k) => {
+    if (payload[k] === "" || payload[k] == null) {
+        delete payload[k];
+    }
+    });
 
-    // Si el back devuelve el objeto actualizado, refrescamos
-    setForm((prev) => ({ ...prev, ...updated }));
-    if (updated?.id_zona != null) {
-    const found = zonas.find((z) => z.value === updated.id_zona) || null;
-    setZonaSeleccionada(found);
+    await updatePrestador(prestadorId, payload);
+
+    const zonasActuales = (habilidades?.zonas || []).map((z) => z.id);
+    const zonasSeleccionadasIds = zonasSeleccionadas.map((z) => z.value);
+
+    for (const id of zonasSeleccionadasIds) {
+    if (!zonasActuales.includes(id)) {
+        await addZonaToPrestador(prestadorId, id);
+    }
+    }
+
+    for (const id of zonasActuales) {
+    if (!zonasSeleccionadasIds.includes(id)) {
+        await removeZonaFromPrestador(prestadorId, id);
+    }
     }
 
     setSuccessOpen(true);
-} catch (e) {
-    setError(e.message || "Error al actualizar el perfil.");
+} catch (err) {
+    setError(err.message || "Error al guardar cambios");
 } finally {
     setSaving(false);
 }
 };
+
+// 🔹 Filtrar habilidades
+const habilidadesFiltradas = useMemo(() => {
+const f = filtro.toLowerCase();
+return (habilidades || []).filter(
+    (h) =>
+    h.nombre.toLowerCase().includes(f) ||
+    (h.nombre_rubro || "").toLowerCase().includes(f)
+);
+}, [habilidades, filtro]);
 
 return (
 <AppLayout>
@@ -173,14 +203,7 @@ return (
     <Grid gutter="xl" align="stretch">
         {/* Columna izquierda */}
         <Grid.Col span={{ base: 12, md: 7 }}>
-        <Box
-            p="lg"
-            bg="white"
-            style={{
-            borderRadius: 16,
-            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
-            }}
-        >
+        <Box p="lg" bg="white" style={{ borderRadius: 16 }}>
             <Text fw={600} fz="lg" mb="md" ta="center">
             Editar Perfil
             </Text>
@@ -204,7 +227,7 @@ return (
                 value={form.email}
                 onChange={handleChange("email")}
             />
-            <TextInput label="DNI" placeholder="No modificable" disabled />
+            <TextInput label="DNI" value={form.dni} disabled />
             </Group>
 
             <Group grow mb="md" style={{ alignItems: "flex-end" }}>
@@ -217,23 +240,14 @@ return (
                     marginBottom: 6,
                 }}
                 >
-                Zona
+                Zonas
                 </label>
                 <Select
-                isMulti={false}
+                isMulti
                 options={zonas}
-                placeholder="Seleccioná zona"
-                value={zonaSeleccionada}
-                onChange={(opt) => {
-                    setZonaSeleccionada(opt);
-                    setForm((prev) => ({ ...prev, id_zona: opt ? opt.value : null }));
-                }}
-                styles={{
-                    control: (base) => ({ ...base, fontSize: 13, minHeight: 38 }),
-                    option: (base) => ({ ...base, fontSize: 13, padding: "6px 10px" }),
-                    singleValue: (base) => ({ ...base, fontSize: 12 }),
-                    placeholder: (base) => ({ ...base, fontSize: 12 }),
-                }}
+                placeholder="Seleccioná zonas"
+                value={zonasSeleccionadas}
+                onChange={(opts) => setZonasSeleccionadas(opts || [])}
                 />
             </Box>
             <TextInput
@@ -258,57 +272,89 @@ return (
             </Group>
 
             <Divider my="sm" label="Tus Habilidades" labelPosition="center" />
-            <TextInput placeholder="Buscar habilidad" mb="sm" />
-            <Box mih={100} mb="md" style={{ border: "1px solid #ddd", borderRadius: 8 }} />
+            <TextInput
+            placeholder="Buscar habilidad"
+            mb="sm"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            />
+
+            <Box
+            mih={100}
+            mb="md"
+            style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8 }}
+            >
+            {habilidadesFiltradas.length === 0 ? (
+                <Text c="dimmed" fz="sm">
+                No se encontraron habilidades
+                </Text>
+            ) : (
+                habilidadesFiltradas.map((h) => (
+                <Box
+                    key={h.id}
+                    p="xs"
+                    style={{
+                    borderBottom: "1px solid #eee",
+                    }}
+                >
+                    <Text fw={500} style={{ fontSize: 14 }}>
+                    {h.nombre}
+                    </Text>
+                    <Text fz="xs" c="dimmed">
+                    {h.nombre_rubro}
+                    </Text>
+                </Box>
+                ))
+            )}
+            </Box>
         </Box>
         </Grid.Col>
 
-
+        {/* Columna derecha */}
         <Grid.Col span={{ base: 12, md: 5 }}>
-        <Box
-            p="lg"
-            bg="white"
-            style={{
-            borderRadius: 16,
-            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
-            }}
-        >
+        <Box p="lg" bg="white" style={{ borderRadius: 16 }}>
             <Text fw={600} fz="lg" mb="md" ta="center">
-            Calificación
+            Calificaciones
             </Text>
-            <Group justify="center" mb="sm">
-            <Text fz="xl" fw={700}>
-                5.0
-            </Text>
-            <Rating value={5} readOnly />
+            <Group justify="center" mb="md">
+            <Rating
+                value={
+                reviews.length > 0
+                    ? reviews.reduce((sum, r) => sum + (r.estrellas || 0), 0) /
+                    reviews.length
+                    : 0
+                }
+                readOnly
+            />
             </Group>
+
             <Text ta="center" mb="md">
-            (3 Reviews)
+            ({reviews.length} Reviews)
             </Text>
-            <Box mb="lg">
-            {[5, 4, 3, 2, 1].map((s) => (
-                <Group key={s} spacing="xs" mb={4}>
-                <Text w={20}>{s}</Text>
-                <Progress value={s * 15} w="100%" color="#93755E" />
-                </Group>
-            ))}
-            </Box>
+
             <Divider my="sm" />
+
             <Box style={{ maxHeight: 300, overflowY: "auto" }}>
-            {reviews.map((r, i) => (
-                <Box key={i} mb="md">
-                <Group>
-                    <Avatar radius="xl" color="#93755E">
-                    {r.name[0]}
-                    </Avatar>
-                    <Text fw={600}>{r.name}</Text>
-                    <Rating value={r.rating} readOnly size="sm" />
-                </Group>
-                <Text fz="sm" c="dimmed" mt={4}>
-                    {r.text}
+            {reviews.length === 0 ? (
+                <Text fz="sm" c="dimmed">
+                Este prestador aún no tiene calificaciones
                 </Text>
+            ) : (
+                reviews.map((r) => (
+                <Box key={r.id} mb="md">
+                    <Group>
+                    <Avatar radius="xl" color="#93755E">
+                        {r.nombre_usuario ? r.nombre_usuario[0] : "U"}
+                    </Avatar>
+                    <Text fw={600}>{r.nombre_usuario}</Text>
+                    <Rating value={r.estrellas} readOnly size="sm" />
+                    </Group>
+                    <Text fz="sm" c="dimmed" mt={4}>
+                    {r.descripcion || "Sin comentario"}
+                    </Text>
                 </Box>
-            ))}
+                ))
+            )}
             </Box>
         </Box>
         </Grid.Col>
@@ -320,21 +366,22 @@ return (
         centered
         withCloseButton
         title={
-            <Group gap="xs">
+        <Group gap="xs">
             <IconCircleCheck size={20} />
             <Text fw={600}>¡Datos actualizados!</Text>
-            </Group>
-        }>
+        </Group>
+        }
+    >
         <Group justify="center" mb="md">
-            <Text c="#black" >Tus cambios se guardaron correctamente.</Text>
+        <Text c="#black">Tus cambios se guardaron correctamente.</Text>
         </Group>
-        
+
         <Group justify="end" mt="md">
-            <Button color="#93755E" onClick={() => setSuccessOpen(false)}>
+        <Button color="#93755E" onClick={() => setSuccessOpen(false)}>
             Aceptar
-            </Button>
+        </Button>
         </Group>
-        </Modal>
+    </Modal>
     </Box>
 </AppLayout>
 );

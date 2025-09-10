@@ -1,4 +1,3 @@
-// src/pages/Habilidades.js
 import React, { useMemo, useState, useEffect } from "react";
 import { Box, Text, Group, Button, Pagination, useMantineTheme } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
@@ -9,12 +8,11 @@ import TableHabilidad from "../components/TableHabilidad";
 import ModalHabilidad from "../components/ModalHabilidad";
 import CardsHabilidad from "../components/CardsHabilidad";
 import ConfirmDelete from "../components/ModalBorrar";
-import { habilidadesApi } from "../Api/habilidades";
-import { rubrosApi } from "../Api/rubrosServicio";
+import { API_URL } from "../Api/api";
+import { addHabilidadToPrestador, removeHabilidadFromPrestador } from "../Api/prestadores";
 
 export default function Habilidades() {
-const [data, setData] = useState([]);
-const [rubros, setRubros] = useState([]);
+const [data, setData] = useState([]); // habilidades del prestador
 const [loading, setLoading] = useState(true);
 
 // filtros
@@ -25,104 +23,96 @@ const [fServicio, setFServicio] = useState("");
 const pageSize = 10;
 const [page, setPage] = useState(1);
 
-// cargar datos del back
+// 🔹 cargar habilidades del prestador
 useEffect(() => {
-(async () => {
-try {
+const fetchHabilidadesPrestador = async () => {
+    try {
     setLoading(true);
-    const [hab, rub] = await Promise.all([habilidadesApi.list(), rubrosApi.list()]);
-    setData(hab || []);
-    setRubros(rub || []);
-} finally {
+    const token = localStorage.getItem("token");
+    const prestadorId = localStorage.getItem("prestador_id");
+
+    if (!token || !prestadorId) {
+        console.error("Falta token o prestador_id en localStorage");
+        return;
+    }
+
+    const res = await fetch(`${API_URL}prestadores/${prestadorId}`, {
+        method: "GET",
+        headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!res.ok) throw new Error("Error al traer habilidades");
+
+    const prestador = await res.json();
+    setData(prestador.habilidades || []);
+    } catch (err) {
+    console.error("Error cargando habilidades:", err.message);
+    } finally {
     setLoading(false);
-}
-})();
+    }
+};
+
+fetchHabilidadesPrestador();
 }, []);
-
-// helpers
-const getRubroId = (h) =>
-h?.id_rubro ?? h?.rubro_id ?? h?.idRubro ?? h?.rubro?.id ?? null;
-
-const rubroById = useMemo(
-() => Object.fromEntries((rubros || []).map((r) => [r.id, r.nombre])),
-[rubros]
-);
 
 // Filtro
 const filtered = useMemo(() => {
-const match = (v, f) => String(v ?? "").toLowerCase().includes(f.trim().toLowerCase());
-return (data || []).filter((r) => {
-    const servicioNombre = r.servicio ?? rubroById[getRubroId(r)] ?? "";
-    return match(r.nombre, fNombre) && match(servicioNombre, fServicio);
+const match = (v, f) =>
+    String(v ?? "").toLowerCase().includes(f.trim().toLowerCase());
+return (data || []).filter((h) => {
+    const servicioNombre = h.nombre_rubro ?? "";
+    return match(h.nombre, fNombre) && match(servicioNombre, fServicio);
 });
-}, [data, fNombre, fServicio, rubroById]);
+}, [data, fNombre, fServicio]);
 
 const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-// retroceder página si borré el último
-useEffect(() => {
-if (page > totalPages) setPage(totalPages);
-}, [page, totalPages]);
-
-// rows para UI (agrega nombre de servicio)
 const rowsView = useMemo(
 () =>
     pageData.map((h) => ({
     ...h,
-    servicio: h.servicio ?? rubroById[getRubroId(h)] ?? "—",
+    servicio: h.nombre_rubro ?? "—",
     })),
-[pageData, rubroById]
+[pageData]
 );
 
 // ---- Crear ----
 const [openNuevo, setOpenNuevo] = useState(false);
 const [creating, setCreating] = useState(false);
 
-const handleCreate = async ({ nombre, id_rubro, descripcion }) => {
+const handleSelectHabilidad = async (habilidad) => {
 try {
     setCreating(true);
-    const created = await habilidadesApi.create({ nombre, descripcion, id_rubro });
-    setData((prev) => [...prev, created]);
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("Falta prestador_id");
+
+    // asociamos al prestador
+    await addHabilidadToPrestador(prestadorId, habilidad.id);
+
+    // refrescamos
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_URL}prestadores/${prestadorId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    });
+    const prestador = await res.json();
+    setData(prestador.habilidades || []);
+
     setOpenNuevo(false);
 } catch (err) {
-    alert(err.message || "No se pudo crear la habilidad");
+    console.error("Error vinculando habilidad:", err.message);
+    alert("No se pudo vincular la habilidad");
 } finally {
     setCreating(false);
 }
 };
 
-// ---- Editar ----
-const [openEdit, setOpenEdit] = useState(false);
-const [editingRow, setEditingRow] = useState(null);
-const [savingEdit, setSavingEdit] = useState(false);
-
-const openEditModal = (rowView) => {
-  const original = data.find(d => d.id === rowView.id) || rowView;
-  // log para chequear:
-  // console.log("edit original:", original);
-  setEditingRow(original);
-  setOpenEdit(true);
-};
-
-const handleUpdate = async ({ id, nombre, id_rubro, descripcion }) => {
-try {
-    setSavingEdit(true);
-    const updated = await habilidadesApi.update(id, { nombre, descripcion, id_rubro });
-    setData((prev) => prev.map((x) => (x.id === id ? { ...x, ...updated } : x)));
-    setOpenEdit(false);
-    setEditingRow(null);
-} catch (err) {
-    alert(err.message || "No se pudo actualizar la habilidad");
-} finally {
-    setSavingEdit(false);
-}
-};
-
-// ---- Eliminar (con confirmación) ----
+// ---- Eliminar ----
 const [confirmOpen, setConfirmOpen] = useState(false);
 const [deletingId, setDeletingId] = useState(null);
-const [deleting, setDeleting] = useState(false);
 
 const askDelete = (id) => {
 setDeletingId(id);
@@ -131,15 +121,15 @@ setConfirmOpen(true);
 
 const confirmDelete = async () => {
 try {
-    setDeleting(true);
-    await habilidadesApi.remove(deletingId);
-    setData((prev) => prev.filter((x) => x.id !== deletingId));
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("Falta prestador_id");
+    await removeHabilidadFromPrestador(prestadorId, deletingId);
+    setData((prev) => prev.filter((h) => h.id !== deletingId));
     setConfirmOpen(false);
     setDeletingId(null);
 } catch (err) {
-    alert(err.message || "No se pudo eliminar la habilidad");
-} finally {
-    setDeleting(false);
+    console.error("Error eliminando habilidad:", err.message);
+    alert("No se pudo eliminar la habilidad");
 }
 };
 
@@ -154,9 +144,14 @@ return (
     bg="white"
     maw={{ base: "100%", lg: 1100, xl: 1200 }}
     mx="auto"
-    style={{ borderRadius: 16, boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)" }}
+    style={{
+        borderRadius: 16,
+        boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+    }}
     >
-    <Text fw={700} fz="xl" mb="md" ta="center">Habilidades</Text>
+    <Text fw={700} fz="xl" mb="md" ta="center">
+        Mis Habilidades
+    </Text>
 
     <Group justify={isMobile ? "stretch" : "flex-start"} mb="sm">
         <Button
@@ -178,9 +173,17 @@ return (
     />
 
     {isMobile ? (
-        <CardsHabilidad rows={rowsView} onEdit={openEditModal} onDelete={askDelete} loading={loading} />
+        <CardsHabilidad
+        rows={rowsView}
+        onDelete={askDelete}
+        loading={loading}
+        />
     ) : (
-        <TableHabilidad rows={rowsView} onEdit={openEditModal} onDelete={askDelete} loading={loading} />
+        <TableHabilidad
+        rows={rowsView}
+        onDelete={askDelete}
+        loading={loading}
+        />
     )}
 
     <Group justify={isMobile ? "center" : "space-between"} mt="md">
@@ -204,28 +207,16 @@ return (
     <ModalHabilidad
     opened={openNuevo}
     onClose={() => setOpenNuevo(false)}
-    mode="create"
-    onCreate={handleCreate}
-    rubros={rubros}
+    onSelect={handleSelectHabilidad}
+    habilidadesActuales={data}
     loading={creating}
     />
-
-    <ModalHabilidad
-    opened={openEdit}
-    onClose={() => setOpenEdit(false)}
-    mode="edit"
-    initialValues={editingRow}
-    onUpdate={handleUpdate}
-    rubros={rubros}
-    loading={savingEdit}
-    />
-
 
     <ConfirmDelete
     opened={confirmOpen}
     onCancel={() => setConfirmOpen(false)}
     onConfirm={confirmDelete}
-    loading={deleting}
+    loading={false}
     itemLabel="esta habilidad"
     />
 </AppLayout>

@@ -1,6 +1,6 @@
 import React from "react";
 import * as MC from "@mantine/core";
-import { IconPencil, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 
 export default function HabilidadesTable({
 rows = [],
@@ -68,14 +68,6 @@ return (
                 <MC.Table.Td>{r.servicio}</MC.Table.Td>
                 <MC.Table.Td>
                 <MC.Group justify="center" gap="xs">
-                    <MC.ActionIcon
-                    variant="light"
-                    color="indigo"
-                    aria-label="Editar"
-                    onClick={() => onEdit?.(r)}
-                    >
-                    <IconPencil size={18} />
-                    </MC.ActionIcon>
                     <MC.ActionIcon
                     variant="light"
                     color="red"
