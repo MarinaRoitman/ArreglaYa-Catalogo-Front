@@ -68,7 +68,7 @@ return (
 
     <Stack gap="sm">
         <TextInput
-        placeholder="Tiempo estimado"
+        placeholder="Tiempo estimado (Hrs)"
         value={tiempo}
         onChange={(e) => setTiempo(e.currentTarget.value)}
         onBlur={() => setTouched((t) => ({ ...t, tiempo: true }))}
@@ -79,7 +79,7 @@ return (
         leftSection={<IconClockHour4 size={16} />}
         />
         <TextInput
-        placeholder="Monto total"
+        placeholder="Tarifa ($)"
         value={monto}
         onChange={(e) => setMonto(e.currentTarget.value)}
         onBlur={() => setTouched((t) => ({ ...t, monto: true }))}

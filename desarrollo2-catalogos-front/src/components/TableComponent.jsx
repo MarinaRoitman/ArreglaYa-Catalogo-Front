@@ -38,7 +38,7 @@ export default function TableComponent({ rows = [], aprobar, rechazar, calificar
               {type !== 'solicitudes' && (
                 <>
                   <MC.Table.Th><MC.Text fw={600} fz="sm" ta="center">Tiempo Estimado</MC.Text></MC.Table.Th>
-                  <MC.Table.Th><MC.Text fw={600} fz="sm" ta="center">Costo Total</MC.Text></MC.Table.Th>
+                  <MC.Table.Th><MC.Text fw={600} fz="sm" ta="center">Tarifa</MC.Text></MC.Table.Th>
                 </>
               )}
 

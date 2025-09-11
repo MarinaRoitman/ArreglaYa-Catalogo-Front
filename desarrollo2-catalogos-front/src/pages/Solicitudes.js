@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Box, Text, Group, Pagination, useMantineTheme } from "@mantine/core";
+import React, { useMemo, useState } from "react";
+import { Box, Text } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
@@ -7,23 +7,20 @@ import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
 import ConfirmDelete from "../components/ModalBorrar";
 
-// El componente ahora recibe { data, aprobar, rechazar } como props desde App.js
-export default function Solicitudes({ data, aprobar, rechazar }) { 
-  
-  // Los estados para filtros y paginación se mantienen
+export default function Solicitudes({ data, aprobar, rechazar }) {
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
   const [fFecha, setFFecha] = useState("");
   const [fServ, setFServ] = useState("");
   const [fHab, setFHab] = useState("");
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
 
-  // La lógica de filtrado ahora funciona sobre la 'data' que llega por props
+  // Filtrado simple
   const filtered = useMemo(() => {
     const match = (val, f) =>
-      String(val).toLowerCase().includes(f.trim().toLowerCase());
+      String(val ?? "")
+        .toLowerCase()
+        .includes(f.trim().toLowerCase());
     return data.filter(
       (r) =>
         match(r.nombre, fNombre) &&
@@ -35,14 +32,7 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
     );
   }, [data, fNombre, fTel, fDir, fFecha, fServ, fHab]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-  
-  // Lógica para el modal de borrado/rechazo
+  // Modal de confirmación para rechazar
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -54,7 +44,7 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
 
   const confirmDelete = () => {
     setDeleting(true);
-    rechazar(deletingId); // Llama a la función de App.js
+    rechazar(deletingId);
     setConfirmOpen(false);
     setDeletingId(null);
     setDeleting(false);
@@ -65,12 +55,18 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
     setDeletingId(null);
   };
 
-  const theme = useMantineTheme();
-  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const isMobile = useMediaQuery("(max-width: 48em)");
 
   return (
     <AppLayout>
-      <Box p="lg" bg="white" style={{ borderRadius: 16, boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)" }}>
+      <Box
+        p="lg"
+        bg="white"
+        style={{
+          borderRadius: 16,
+          boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+        }}
+      >
         <Text fw={700} fz="xl" mb="md" ta="center">
           Solicitudes
         </Text>
@@ -82,40 +78,29 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
           fFecha={fFecha} setFFecha={setFFecha}
           fServ={fServ} setFServ={setFServ}
           fHab={fHab} setFHab={setFHab}
-          setPage={setPage}
         />
 
-        {isMobile ? (
+        {filtered.length === 0 ? (
+          <Text ta="center" mt="lg" c="dimmed">
+            No se encontraron resultados
+          </Text>
+        ) : isMobile ? (
           <CardsMobile
-            rows={pageData}
+            rows={filtered}
             aprobar={aprobar}
             rechazar={askDelete}
             type="solicitudes"
           />
         ) : (
           <TableComponent
-            rows={pageData}
+            rows={filtered}
             aprobar={aprobar}
             rechazar={askDelete}
             type="solicitudes"
           />
         )}
-
-        <Group justify="space-between" mt="md">
-          <Text size="sm" c="dimmed">
-            Página <Text span fw={700}>{page}</Text> de {totalPages}
-          </Text>
-          <Pagination
-            value={page}
-            onChange={setPage}
-            total={totalPages}
-            color="#93755E"
-            variant="filled"
-            radius="md"
-            size="sm"
-          />
-        </Group>
       </Box>
+
       <ConfirmDelete
         opened={confirmOpen}
         onCancel={cancelDelete}
