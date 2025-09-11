@@ -1,54 +1,117 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../test.utils";
 import { MemoryRouter } from "react-router-dom";
 import LoginPage from "../pages/LoginPage";
 
-test("renderiza los inputs de login", () => {
-render(
-<MemoryRouter>
-    <LoginPage />
-</MemoryRouter>
-);
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+  useLocation: () => ({ state: {} }),
+}));
 
-// Cambié Usuario → Email
-expect(screen.getByPlaceholderText(/Email/i)).toBeInTheDocument();
-expect(screen.getByPlaceholderText(/Contraseña/i)).toBeInTheDocument();
-expect(
-screen.getByRole("button", { name: /Iniciar Sesión/i })
-).toBeInTheDocument();
-});
+global.fetch = jest.fn();
 
-test("permite escribir en los inputs", () => {
-render(
-<MemoryRouter>
-    <LoginPage />
-</MemoryRouter>
-);
+describe("LoginPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+  });
 
-const emailInput = screen.getByPlaceholderText(/Email/i);
-const contrasenaInput = screen.getByPlaceholderText(/Contraseña/i);
+  it("renderiza los inputs y botones", () => {
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByPlaceholderText(/Email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByText(/Iniciar Sesión/i)).toBeInTheDocument();
+  });
 
-fireEvent.change(emailInput, { target: { value: "martina@mail.com" } });
-fireEvent.change(contrasenaInput, { target: { value: "1234" } });
+  it("muestra error si las credenciales son inválidas", async () => {
+    fetch.mockResolvedValueOnce({ ok: false });
 
-expect(emailInput.value).toBe("martina@mail.com");
-expect(contrasenaInput.value).toBe("1234");
-});
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
 
-test("ejecuta el submit con datos ingresados", () => {
-render(
-<MemoryRouter>
-    <LoginPage />
-</MemoryRouter>
-);
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "fake@mail.com", name: "usuario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: "wrong", name: "contrasena" },
+    });
 
-const emailInput = screen.getByPlaceholderText(/Email/i);
-const contrasenaInput = screen.getByPlaceholderText(/Contraseña/i);
-const boton = screen.getByRole("button", { name: /Iniciar Sesión/i });
+    fireEvent.click(screen.getByText(/Iniciar Sesión/i));
 
-fireEvent.change(emailInput, { target: { value: "martina@mail.com" } });
-fireEvent.change(contrasenaInput, { target: { value: "1234" } });
-fireEvent.click(boton);
+    await waitFor(() =>
+      expect(screen.getByText(/Credenciales inválidas/i)).toBeInTheDocument()
+    );
+  });
 
-expect(emailInput.value).toBe("martina@mail.com");
-expect(contrasenaInput.value).toBe("1234");
+  it("guarda token y navega al iniciar sesión correctamente", async () => {
+    const fakeToken =
+      "aaa." +
+      btoa(JSON.stringify({ sub: 123 })) +
+      ".ccc"; // payload con sub=123
+    const mockUser = { nombre: "Martina" };
+
+    // 1er fetch -> login
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: fakeToken }),
+    });
+    // 2do fetch -> prestador
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockUser,
+    });
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "marti@mail.com", name: "usuario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: "1234", name: "contrasena" },
+    });
+
+    fireEvent.click(screen.getByText(/Iniciar Sesión/i));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("token")).toBe(fakeToken);
+      expect(localStorage.getItem("prestador_id")).toBe("123");
+      expect(localStorage.getItem("userName")).toBe("Martina");
+      expect(mockNavigate).toHaveBeenCalledWith("/solicitudes", { replace: true });
+    });
+  });
+
+  it("muestra modal con error genérico si falla fetch", async () => {
+    fetch.mockRejectedValueOnce(new Error("Falla de red"));
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "test@mail.com", name: "usuario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: "1234", name: "contrasena" },
+    });
+
+    fireEvent.click(screen.getByText(/Iniciar Sesión/i));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Falla de red/i)).toBeInTheDocument()
+    );
+  });
 });
