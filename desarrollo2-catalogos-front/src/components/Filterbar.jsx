@@ -8,9 +8,9 @@ fDir, setFDir,
 fFecha, setFFecha,
 fServ, setFServ,
 fHab, setFHab,
-setPage,
+
 }) {
-const on = (setter) => (e) => { setPage(1); setter(e.currentTarget.value); };
+const on = (setter) => (e) => setter(e.currentTarget.value);
 
 return (
 <Box mb="md">

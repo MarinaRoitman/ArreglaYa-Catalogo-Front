@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, ScrollArea, Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
-import { IconListDetails, IconBolt, IconUser, IconLogout, IconChecks, IconRosetteDiscountCheckFilled } from "@tabler/icons-react";
+import { IconListDetails, IconBolt, IconUser, IconLogout, IconChecks, IconRosetteDiscountCheckFilled, IconCreditCard } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
 
@@ -70,6 +70,12 @@ export default function Sidebar() {
             leftSection={<IconBolt size={18} />}
             onClick={() => navigate("/habilidades")}
             active={pathname.startsWith("/habilidades")}
+            color="#b67747ff"
+          />
+          <Divider my="md" />
+          <NavLink
+            label="Ir a Pagos"
+            leftSection={<IconCreditCard size={18} />}
             color="#b67747ff"
           />
         </Box>
