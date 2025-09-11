@@ -5,7 +5,6 @@ import { IconCheck, IconX, IconClockHour4, IconCircleCheck } from '@tabler/icons
 // Asegúrate de que reciba todas las props necesarias
 const CardsMobile = ({ rows = [], aprobar, rechazar, calificar, type }) => {
 
-
   return (
     <MC.Stack>
       {rows.map((row) => (
@@ -18,7 +17,7 @@ const CardsMobile = ({ rows = [], aprobar, rechazar, calificar, type }) => {
           <MC.Text size="sm"><MC.Text span fw={600}>Dirección:</MC.Text> {row.direccion}</MC.Text>
           <MC.Text size="sm"><MC.Text span fw={600}>Fecha y Hora:</MC.Text> {row.fechaHora}</MC.Text>
 
-          {/* 1. Muestra tiempo y costo si no estamos en 'solicitudes' */}
+          {/* 1. Muestra tiempo y costo si NO estamos en 'solicitudes' */}
           {type !== 'solicitudes' && (
             <>
               <MC.Text size="sm"><MC.Text span fw={600}>Tiempo Estimado:</MC.Text> {row.tiempoEstimado || '-'}</MC.Text>
@@ -31,45 +30,43 @@ const CardsMobile = ({ rows = [], aprobar, rechazar, calificar, type }) => {
             <MC.Badge color="blue" variant="light">{row.habilidad}</MC.Badge>
           </MC.Group>
 
-        <MC.Group justify="flex-end" gap="xs" mt="sm">
-            {/* --- Lógica para Solicitudes --- */}
+          {/* 2. Lógica de botones corregida para TODAS las vistas */}
+          <MC.Group justify="flex-end" gap="xs" mt="sm">
             {type === 'solicitudes' && (
-            <>
+              <>
                 <MC.ActionIcon variant="light" color="teal" aria-label="Aprobar" onClick={() => aprobar?.(row)}>
-                <IconCheck size={18} />
+                  <IconCheck size={18} />
                 </MC.ActionIcon>
                 <MC.ActionIcon variant="light" color="red" aria-label="Rechazar" onClick={() => rechazar?.(row.id)}>
-                <IconX size={18} />
+                  <IconX size={18} />
                 </MC.ActionIcon>
-            </>
+              </>
             )}
 
-            {/* --- Lógica para Confirmados --- */}
             {type === 'confirmados' && (
-                row.clienteConfirmo ? (
+              row.clienteConfirmo ? (
                 <MC.ActionIcon variant="light" color="green" aria-label="Cliente confirmó">
-                    <IconCircleCheck size={18} />
+                  <IconCircleCheck size={18} />
                 </MC.ActionIcon>
-                ) : (
+              ) : (
                 <MC.ActionIcon variant="light" color="blue" aria-label="Esperando confirmación">
-                    <IconClockHour4 size={18} />
+                  <IconClockHour4 size={18} />
                 </MC.ActionIcon>
-                )
+              )
             )}
             
-            {/* --- Lógica para Realizados --- */}
             {type === 'realizados' && (
-                row.clienteConfirmo ? (
-                <MC.ActionIcon variant="light" color="green" aria-label="Realizado y Confirmado">
-                    <IconCircleCheck size={18} />
+              row.clienteConfirmo ? (
+                <MC.ActionIcon variant="light" color="green" aria-label="Realizado y Confirmado" onClick={() => calificar?.(row.id)}>
+                  <IconCircleCheck size={18} />
                 </MC.ActionIcon>
-                ) : (
+              ) : (
                 <MC.ActionIcon variant="light" color="red" aria-label="Expirado sin confirmar">
-                    <IconX size={18} />
+                  <IconX size={18} />
                 </MC.ActionIcon>
-                )
+              )
             )}
-        </MC.Group>
+          </MC.Group>
         </MC.Card>
       ))}
     </MC.Stack>
