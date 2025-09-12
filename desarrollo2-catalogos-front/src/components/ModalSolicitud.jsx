@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import * as MC from "@mantine/core";
 import { DateTimePicker } from '@mantine/dates';
 import 'dayjs/locale/es';
@@ -34,12 +34,10 @@ export default function ConfirmarSolicitudModal({ opened, onClose, job, onSubmit
       <MC.Stack gap="md">
         <MC.Paper withBorder p="sm" radius="sm" bg="gray.0">
           <MC.Text size="sm">Propuesta para el trabajo:</MC.Text>
-          <MC.Text fw={700} size="lg">"{job.servicio}"</MC.Text>
+          <MC.Text fw={700} size="lg">"{job.habilidad || job.servicio}"</MC.Text>
           <MC.Text size="sm" c="dimmed">Cliente: {job.nombre}</MC.Text>
         </MC.Paper>
-
         <MC.Divider my="xs" />
-
         <DateTimePicker
           label="Nueva Fecha y Hora Propuesta"
           placeholder="Elige una fecha y hora"
@@ -48,10 +46,8 @@ export default function ConfirmarSolicitudModal({ opened, onClose, job, onSubmit
           locale="es"
           minDate={new Date()}
           required
-          // ¡CORRECCIÓN CLAVE AQUÍ!
           popoverProps={{ zIndex: 1001 }}
         />
-
         <MC.NumberInput
           label="Costo Total del Trabajo"
           placeholder="Ingresa el monto final"
@@ -64,7 +60,6 @@ export default function ConfirmarSolicitudModal({ opened, onClose, job, onSubmit
           required
           mt="md"
         />
-        
         <MC.Group justify="flex-end" mt="xl">
           <MC.Button variant="default" onClick={onClose}>Cancelar</MC.Button>
           <MC.Button color="#b67747ff" onClick={handleSubmit}>Enviar Presupuesto</MC.Button>
