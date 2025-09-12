@@ -1,112 +1,75 @@
-import React, { useState, useEffect } from "react";
-import {
-Modal, Text, Group, Stack, TextInput, Button, Box, Divider,
-SimpleGrid, Paper, ThemeIcon
-} from "@mantine/core";
-import {
-IconUser, IconDeviceMobile, IconCalendar, IconMapPin,
-IconTools, IconBolt, IconClockHour4, IconCurrencyDollar
-} from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+import * as MC from "@mantine/core";
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/es';
 
-export default function ModalSolicitud({ opened, onClose, job, onSubmit }) {
-const [tiempo, setTiempo] = useState("");
-const [monto, setMonto] = useState("");
-const [touched, setTouched] = useState({ tiempo: false, monto: false });
+export default function ConfirmarSolicitudModal({ opened, onClose, job, onSubmit }) {
+  const [fecha, setFecha] = useState(null);
+  const [montoTotal, setMontoTotal] = useState("");
 
-useEffect(() => {
-setTiempo(""); setMonto(""); setTouched({ tiempo: false, monto: false });
-}, [opened, job?.id]);
+  useEffect(() => {
+    if (job) {
+      setFecha(job.fecha ? new Date(job.fecha) : new Date());
+      setMontoTotal(job.montoTotal || "");
+    }
+  }, [job]);
 
-const montoOk = Number(monto) > 0;
-const isValid = tiempo.trim() !== "" && montoOk;
+  const handleSubmit = () => {
+    if (!fecha || !montoTotal) {
+      alert("Por favor, completa la fecha y el monto.");
+      return;
+    }
+    onSubmit({
+      id: job.id,
+      fecha: fecha.toISOString(),
+      montoTotal: parseFloat(montoTotal),
+    });
+    onClose();
+  };
 
-return (
-<Modal
-    opened={opened}
-    onClose={onClose}
-    centered
-    radius="lg"
-    size="lg"
-    withCloseButton={false}
-    overlayProps={{ opacity: 0.35, blur: 2 }}
-    title={<Text fw={800} fz="xl">Confirmar Solicitud</Text>}
->
-    <Stack gap="md">
-    <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-        <Group gap="xs" justify="center">
-        <ThemeIcon variant="light" radius="xl"><IconUser size={16} /></ThemeIcon>
-        <Box>
-            <Text fw={700} lh={1.1}>{job?.nombre}</Text>
-            <Text size="xs" c="dimmed">Cliente</Text>
-        </Box>
-        </Group>
-        <Group gap="xs" justify="center">
-        <ThemeIcon variant="light" radius="xl"><IconDeviceMobile size={16} /></ThemeIcon>
-        <Box>
-            <Text fw={600}>{job?.telefono}</Text>
-            <Text size="xs" c="dimmed">Teléfono</Text>
-        </Box>
-        </Group>
-        <Group gap="xs" justify="center">
-        <ThemeIcon variant="light" radius="xl"><IconCalendar size={16} /></ThemeIcon>
-        <Box>
-            <Text fw={600}>{job?.fechaHora}</Text>
-            <Text size="xs" c="dimmed">Fecha y hora</Text>
-        </Box>
-        </Group>
-    </SimpleGrid>
+  if (!job) return null;
 
-    <Paper withBorder radius="md" p="md" bg="var(--mantine-color-gray-0)">
-        <Stack gap={6} ta="center">
-        <Group gap={6} justify="center"><IconMapPin size={16} /><Text>{job?.direccion}</Text></Group>
-        <Group gap={6} justify="center"><IconTools size={16} /><Text>{job?.servicio}</Text></Group>
-        <Group gap={6} justify="center"><IconBolt size={16} /><Text>{job?.habilidad}</Text></Group>
-        </Stack>
-    </Paper>
+  return (
+    <MC.Modal opened={opened} onClose={onClose} title="Enviar Presupuesto" centered radius="md" zIndex={1000}>
+      <MC.Stack gap="md">
+        <MC.Paper withBorder p="sm" radius="sm" bg="gray.0">
+          <MC.Text size="sm">Propuesta para el trabajo:</MC.Text>
+          <MC.Text fw={700} size="lg">"{job.servicio}"</MC.Text>
+          <MC.Text size="sm" c="dimmed">Cliente: {job.nombre}</MC.Text>
+        </MC.Paper>
 
-    <Divider />
+        <MC.Divider my="xs" />
 
-    <Stack gap="sm">
-        <TextInput
-        placeholder="Tiempo estimado (Hrs)"
-        value={tiempo}
-        onChange={(e) => setTiempo(e.currentTarget.value)}
-        onBlur={() => setTouched((t) => ({ ...t, tiempo: true }))}
-        error={touched.tiempo && !tiempo.trim() ? "Campo obligatorio" : null}
-        radius="md"
-        size="md"
-        variant="filled"
-        leftSection={<IconClockHour4 size={16} />}
+        <DateTimePicker
+          label="Nueva Fecha y Hora Propuesta"
+          placeholder="Elige una fecha y hora"
+          value={fecha}
+          onChange={setFecha}
+          locale="es"
+          minDate={new Date()}
+          required
+          // ¡CORRECCIÓN CLAVE AQUÍ!
+          popoverProps={{ zIndex: 1001 }}
         />
-        <TextInput
-        placeholder="Tarifa ($)"
-        value={monto}
-        onChange={(e) => setMonto(e.currentTarget.value)}
-        onBlur={() => setTouched((t) => ({ ...t, monto: true }))}
-        error={touched.monto && !montoOk ? "Debe ser mayor a 0" : null}
-        radius="md"
-        size="md"
-        variant="filled"
-        type="number"
-        inputMode="decimal"
-        leftSection={<IconCurrencyDollar size={16} />}
-        />
-    </Stack>
 
-    <Group justify="center" mt="sm">
-        <Button color="#93755E" radius="md" onClick={() => isValid && onSubmit?.({
-        id: job?.id,
-        tiempoEstimado: tiempo.trim(),
-        montoTotal: monto.trim(),
-        })} disabled={!isValid}>
-        Enviar
-        </Button>
-        <Button color="#a07353ff" variant="light" radius="md" onClick={onClose}>
-        Cancelar
-        </Button>
-    </Group>
-    </Stack>
-</Modal>
-);
+        <MC.NumberInput
+          label="Costo Total del Trabajo"
+          placeholder="Ingresa el monto final"
+          value={montoTotal}
+          onChange={setMontoTotal}
+          prefix="$ "
+          thousandSeparator="."
+          decimalSeparator=","
+          allowNegative={false}
+          required
+          mt="md"
+        />
+        
+        <MC.Group justify="flex-end" mt="xl">
+          <MC.Button variant="default" onClick={onClose}>Cancelar</MC.Button>
+          <MC.Button color="#b67747ff" onClick={handleSubmit}>Enviar Presupuesto</MC.Button>
+        </MC.Group>
+      </MC.Stack>
+    </MC.Modal>
+  );
 }
-
