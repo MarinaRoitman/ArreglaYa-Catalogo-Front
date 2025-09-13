@@ -66,8 +66,8 @@ function App() {
           fecha: job.fecha,
           fechaHora: job.fecha ? new Date(job.fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }).replace(",", "") + 'hs' : 'Fecha a convenir',
           
-          servicio: habilidad.nombre || job.descripcion,      // El SERVICIO es el RUBRO de la habilidad
-          habilidad: habilidad.nombre_rubro || 'General',      // La HABILIDAD es el NOMBRE de la habilidad
+          servicio: job.descripcion,      // El SERVICIO es el RUBRO de la habilidad
+          habilidad: habilidad.nombre || 'General',      // La HABILIDAD es el NOMBRE de la habilidad
           
           estado: job.estado,
           montoTotal: job.tarifa,
