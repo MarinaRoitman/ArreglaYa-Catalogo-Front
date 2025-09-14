@@ -18,7 +18,7 @@ const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
     }
     setConfirmOpen(false);
   };
-  
+
   const showActionsColumn = type === 'solicitudes' || type === 'confirmados';
 
   return (
@@ -33,12 +33,12 @@ const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
       >
         <MC.Table.Thead>
           <MC.Table.Tr>
-            <MC.Table.Th w={200}><MC.Text fw={600} fz="sm">Nombre y Apellido</MC.Text></MC.Table.Th>
-            <MC.Table.Th w={120}><MC.Text fw={600} fz="sm">Teléfono</MC.Text></MC.Table.Th>
-            <MC.Table.Th w={250}><MC.Text fw={600} fz="sm">Dirección</MC.Text></MC.Table.Th>
-            <MC.Table.Th w={160}><MC.Text fw={600} fz="sm">Fecha y Hora</MC.Text></MC.Table.Th>
-            <MC.Table.Th w={150}><MC.Text fw={600} fz="sm">Servicio</MC.Text></MC.Table.Th>
-            <MC.Table.Th w={150}><MC.Text fw={600} fz="sm">Habilidad</MC.Text></MC.Table.Th>
+            <MC.Table.Th style={{ minWidth: "180px" }}><MC.Text fw={600} fz="sm">Nombre y Apellido</MC.Text></MC.Table.Th>
+    <MC.Table.Th style={{ minWidth: "120px" }}><MC.Text fw={600} fz="sm">Teléfono</MC.Text></MC.Table.Th>
+    <MC.Table.Th style={{ minWidth: "200px" }}><MC.Text fw={600} fz="sm">Dirección</MC.Text></MC.Table.Th>
+    <MC.Table.Th style={{ minWidth: "150px" }}><MC.Text fw={600} fz="sm">Fecha y Hora</MC.Text></MC.Table.Th>
+    <MC.Table.Th style={{ minWidth: "220px" }}><MC.Text fw={600} fz="sm">Servicio</MC.Text></MC.Table.Th>
+    <MC.Table.Th style={{ minWidth: "180px" }}><MC.Text fw={600} fz="sm">Habilidad</MC.Text></MC.Table.Th>
             
             {type !== 'solicitudes' && (
               <MC.Table.Th w={100}><MC.Text fw={600} fz="sm">Tarifa</MC.Text></MC.Table.Th>
@@ -50,7 +50,7 @@ const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
             )}
             
             {showActionsColumn && (
-              <MC.Table.Th w={120}><MC.Text fw={600} fz="sm">Acciones</MC.Text></MC.Table.Th>
+              <MC.Table.Th w={120}><MC.Text fw={600} fz="sm">Estado</MC.Text></MC.Table.Th>
             )}
           </MC.Table.Tr>
         </MC.Table.Thead>
@@ -93,9 +93,9 @@ const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
                     {type === 'confirmados' && (
                       <>
                         {row.estado === 'aprobado_por_usuario' ? (
-                          <MC.ActionIcon variant="light" color="green" aria-label="Aprobado por Cliente"><IconCircleCheck size={18} /></MC.ActionIcon>
+                      <MC.Badge color="green" variant="light">Confirmado</MC.Badge>
                         ) : (
-                          <MC.ActionIcon variant="light" color="blue" aria-label="Esperando al Cliente"><IconClockHour4 size={18} /></MC.ActionIcon>
+                      <MC.Badge color="blue" variant="light">Pendiente</MC.Badge>
                         )}
                         <MC.ActionIcon variant="light" color="red" aria-label="Cancelar Pedido" onClick={() => rechazar?.(row.id)}><IconX size={18} /></MC.ActionIcon>
                       </>
