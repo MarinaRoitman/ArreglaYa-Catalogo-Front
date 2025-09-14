@@ -12,109 +12,159 @@ import Habilidades from './pages/Habilidades';
 import Perfil from './pages/Perfil';
 import PrivateRoute from './PrivateRoutes';
 
-// Importamos todos los servicios de API necesarios
+// Servicios API
 import { getPedidos, updatePedido, deletePedido } from './Api/pedidosServicio';
 import { getUsuarioById } from './Api/usuarios';
 import { listHabilidades } from './Api/habilidades';
 
-import './App.css'; 
+import './App.css';
 import './Form.css';
 
 const parseCustomDate = (dateString) => {
-    if (!dateString) return null;
-    const d = new Date(dateString);
-    return isNaN(d) ? null : d;
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  return isNaN(d) ? null : d;
 };
 
 function App() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Usamos useCallback para que esta función no se recree en cada render, mejorando el rendimiento
+  // 🧠 Trae los trabajos del usuario actual
   const fetchJobs = useCallback(async () => {
-    if (!localStorage.getItem("token")) {
+    const token = localStorage.getItem('token');
+    const prestadorId = localStorage.getItem('prestador_id');
+
+    // Si no hay sesión, no intentes cargar datos
+    if (!token || !prestadorId) {
+      setJobs([]);
       setLoading(false);
       return;
     }
+
     try {
       setLoading(true);
-      // 1. Obtenemos pedidos y la lista completa de habilidades en paralelo
+
+      // 1) Pedidos del prestador + catálogo de habilidades
+      //    👉 pasamos prestadorId explícito (tu servicio puede tener fallback también)
       const [pedidosData, habilidadesData] = await Promise.all([
-        getPedidos(),
-        listHabilidades()
+        getPedidos(prestadorId),
+        listHabilidades(),
       ]);
-      
-      // 2. Buscamos los datos de todos los clientes necesarios de una sola vez
-      const userIds = [...new Set(pedidosData.map(p => p.id_usuario))];
-      const userPromises = userIds.map(id => getUsuarioById(id));
-      const usersData = await Promise.all(userPromises);
-      const usersMap = usersData.reduce((acc, user) => {
-        acc[user.id] = user;
+
+      // 2) Traer usuarios en lote
+      const userIds = [...new Set((pedidosData || []).map(p => p?.id_usuario).filter(Boolean))];
+      const usersData = await Promise.all(userIds.map(id => getUsuarioById(id)));
+      const usersMap = (usersData || []).reduce((acc, u) => {
+        if (u && u.id != null) acc[u.id] = u;
         return acc;
       }, {});
 
-      // 3. Mapeamos y enriquecemos los datos en un solo paso
-      const mappedData = pedidosData.map(job => {
-        const usuario = usersMap[job.id_usuario] || {};
-        const habilidad = habilidadesData.find(h => h.id === job.id_habilidad) || {};
-        
+      // 3) Mapear filas seguras para la UI
+      const mappedData = (pedidosData || []).map(job => {
+        const usuario = usersMap[job?.id_usuario] || {};
+        const habilidad = (habilidadesData || []).find(h => h?.id === job?.id_habilidad) || {};
+
+        let fechaHoraFmt = 'Fecha a convenir';
+        if (job?.fecha) {
+          const d = new Date(job.fecha);
+          if (!Number.isNaN(d.getTime())) {
+            fechaHoraFmt = d
+              .toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+              .replace(',', '') + 'hs';
+          }
+        }
+
         return {
-          id: job.id,
-          nombre: `${usuario.nombre || 'Usuario'} ${usuario.apellido || ''}`.trim(),
-          telefono: usuario.telefono || 'N/A',
-          direccion: usuario.direccion || 'No especificada', // <-- DIRECCIÓN CORREGIDA
-          fecha: job.fecha,
-          fechaHora: job.fecha ? new Date(job.fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }).replace(",", "") + 'hs' : 'Fecha a convenir',
-          
-          servicio: job.descripcion,      // El SERVICIO es el RUBRO de la habilidad
-          habilidad: habilidad.nombre || 'General',      // La HABILIDAD es el NOMBRE de la habilidad
-          
-          estado: job.estado,
-          montoTotal: job.tarifa,
-          clienteConfirmo: job.estado === 'aprobado_por_usuario' || job.estado === 'finalizado'
+          id: job?.id ?? `tmp-${Math.random().toString(36).slice(2)}`,
+          nombre: `${usuario?.nombre || 'Usuario'} ${usuario?.apellido || ''}`.trim(),
+          telefono: usuario?.telefono || 'N/A',
+          direccion: usuario?.direccion || 'No especificada',
+          fecha: job?.fecha ?? null,
+          fechaHora: fechaHoraFmt,
+          servicio: job?.descripcion ?? '',
+          habilidad: habilidad?.nombre || 'General',
+          estado: job?.estado ?? 'pendiente',
+          montoTotal: job?.tarifa ?? 0,
+          clienteConfirmo:
+            job?.estado === 'aprobado_por_usuario' || job?.estado === 'finalizado',
         };
       });
 
       setJobs(mappedData);
     } catch (error) {
-      console.error("Error al obtener los trabajos:", error);
+      console.error('Error al obtener los trabajos:', error);
       setJobs([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // 🔁 Carga inicial
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
+  // 🔔 Re-fetch cuando Login notifica cambio de usuario (sin romper estructura)
+  useEffect(() => {
+    const onAuthChanged = () => {
+      // fuerza un nuevo ciclo de carga
+      setLoading(true);
+      fetchJobs();
+    };
+    window.addEventListener('auth-changed', onAuthChanged);
+    return () => window.removeEventListener('auth-changed', onAuthChanged);
+  }, [fetchJobs]);
+
+  // Acciones que refrescan listado al terminar
   const profesionalEnviaPresupuesto = async (id, { fecha, montoTotal }) => {
     try {
       await updatePedido(id, {
         fecha: fecha,
         tarifa: montoTotal,
-        estado: 'aprobado_por_prestador'
+        estado: 'aprobado_por_prestador',
       });
       fetchJobs();
-    } catch (error) { console.error("Error al enviar el presupuesto:", error); }
+    } catch (error) {
+      console.error('Error al enviar el presupuesto:', error);
+    }
   };
 
   const rechazarSolicitud = async (id) => {
     try {
       await deletePedido(id);
       fetchJobs();
-    } catch (error) { console.error("Error al rechazar la solicitud:", error); }
+    } catch (error) {
+      console.error('Error al rechazar la solicitud:', error);
+    }
   };
 
+  // Derivación de vistas
   const ahora = new Date();
-  const solicitudesData = jobs.filter(job => job.estado === 'pendiente' && (!job.fecha || parseCustomDate(job.fecha) > ahora));
-  const confirmadosData = jobs.filter(job => (job.estado === 'aprobado_por_prestador' || job.estado === 'aprobado_por_usuario') && (!job.fecha || parseCustomDate(job.fecha) > ahora));
-  const realizadosData = jobs.filter(job => (job.estado === 'finalizado' || job.estado === 'cancelado') && job.fecha && parseCustomDate(job.fecha) < ahora);
+  const solicitudesData = jobs.filter(
+    (job) => job.estado === 'pendiente' && (!job.fecha || parseCustomDate(job.fecha) > ahora)
+  );
+  const confirmadosData = jobs.filter(
+    (job) =>
+      (job.estado === 'aprobado_por_prestador' || job.estado === 'aprobado_por_usuario') &&
+      (!job.fecha || parseCustomDate(job.fecha) > ahora)
+  );
+  const realizadosData = jobs.filter(
+    (job) =>
+      (job.estado === 'finalizado' || job.estado === 'cancelado') &&
+      job.fecha &&
+      parseCustomDate(job.fecha) < ahora
+  );
 
+  // ⛔️ Bloqueá todo hasta terminar la carga
   if (loading) {
-    return ( <Center style={{ height: '100vh' }}><Loader color="#b67747ff" size="xl" /></Center> );
+    return (
+      <Center style={{ height: '100vh' }}>
+        <Loader color="#b67747ff" size="xl" />
+      </Center>
+    );
   }
-  
+
   return (
     <Router>
       <div className="App">
@@ -122,12 +172,51 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
-          
-          <Route path="/solicitudes" element={<PrivateRoute><Solicitudes data={solicitudesData} aprobar={profesionalEnviaPresupuesto} rechazar={rechazarSolicitud} /></PrivateRoute>}/>
-          <Route path="/confirmados" element={<PrivateRoute><Confirmados data={confirmadosData} /></PrivateRoute>}/>
-          <Route path="/realizados" element={<PrivateRoute><Realizados data={realizadosData} /></PrivateRoute>}/>
-          <Route path="/habilidades" element={<PrivateRoute><Habilidades /></PrivateRoute>}/>
-          <Route path="/perfil" element={<PrivateRoute><Perfil /></PrivateRoute>}/>
+
+          <Route
+            path="/solicitudes"
+            element={
+              <PrivateRoute>
+                <Solicitudes
+                  data={solicitudesData}
+                  aprobar={profesionalEnviaPresupuesto}
+                  rechazar={rechazarSolicitud}
+                />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/confirmados"
+            element={
+              <PrivateRoute>
+                <Confirmados data={confirmadosData} />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/realizados"
+            element={
+              <PrivateRoute>
+                <Realizados data={realizadosData} />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/habilidades"
+            element={
+              <PrivateRoute>
+                <Habilidades />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <PrivateRoute>
+                <Perfil />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>

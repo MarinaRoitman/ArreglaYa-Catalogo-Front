@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Modal,
   Text,
@@ -13,6 +13,8 @@ import {
 import { IconAlertCircle } from "@tabler/icons-react";
 
 const BASE_URL = "https://api.desarrollo2-catalogos.online";
+// Cambiá a true si querés volver al modo "recargar toda la app" después del login
+const HARD_RELOAD_AFTER_LOGIN = false;
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ usuario: "", contrasena: "" });
@@ -20,19 +22,9 @@ export default function LoginPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const from = location.state?.from?.pathname || "/solicitudes";
-
-  // 🚀 Si ya hay token (post-reload o usuario que entra a /login logueado), redirigí solo
-  const hasToken = !!localStorage.getItem("token");
-  useEffect(() => {
-    if (hasToken) {
-      const target = localStorage.getItem("postLoginPath") || "/solicitudes";
-      localStorage.removeItem("postLoginPath");
-      navigate(target, { replace: true });
-    }
-  }, [hasToken, navigate]);
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -58,19 +50,18 @@ export default function LoginPage() {
       const token = data?.access_token || data?.token;
       if (!token) throw new Error("No se recibió token");
 
-      // Guardar token
+      // 1) Guardar token
       localStorage.setItem("token", token);
 
-      // Decodificar JWT y sanear el sub -> puede venir "12:1"; nos quedamos con "12"
+      // 2) Decodificar JWT y sanear sub (ej: "12:1" → "12")
       const [, payload] = token.split(".");
       const jsonPayload = JSON.parse(
         atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
       );
-      const rawSub = String(jsonPayload?.sub ?? "");
-      const prestadorId = rawSub.split(":")[0];
+      const prestadorId = String(jsonPayload?.sub ?? "").split(":")[0];
       localStorage.setItem("prestador_id", prestadorId);
 
-      // Guardar nombre visible (opcional)
+      // 3) (Opcional) traer el nombre visible
       try {
         const prestadorRes = await fetch(`${BASE_URL}/prestadores/${prestadorId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -80,21 +71,38 @@ export default function LoginPage() {
           localStorage.setItem("userName", prestador?.nombre || "Usuario");
         }
       } catch {
-        /* silencioso */
+        /* ignore */
       }
 
-      // 🧭 Guardar destino y recargar con loader
-      localStorage.setItem("postLoginPath", from);
       setIsRefreshing(true);
-      window.location.reload();
+
+      if (HARD_RELOAD_AFTER_LOGIN) {
+        // 👉 Modo “recarga total” (bloquea la UI y no muestra nada hasta rehidratar)
+        localStorage.setItem("postLoginPath", from);
+        window.location.reload();
+        return; // no sigue
+      }
+
+      // 👉 Modo sin recarga: avisá al resto de la app y navegá
+      // Emite un evento global por si App.js quiere re-fetch cuando cambie el user
+      try { window.dispatchEvent(new Event("auth-changed")); } catch {}
+
+      // Guardá adónde querías ir por si lo necesitás en App
+      localStorage.setItem("postLoginPath", from);
+
+      // Navegá a destino (replace para no dejar /login en el history)
+      navigate(from, { replace: true });
+      // dejamos el loader un pelito para que la página siguiente pueda montar tranquilo
+      setTimeout(() => setIsRefreshing(false), 300);
+
     } catch (err) {
       setModalMsg(err.message || "Error al iniciar sesión");
       setModalOpen(true);
     }
   };
 
-  // Mostrar loader si estamos refrescando o si ya hay token (redirigiendo)
-  if (isRefreshing || hasToken) {
+  // Mientras el login “sella” sesión o estamos haciendo transición, bloqueá la pantalla
+  if (isRefreshing) {
     return (
       <Center style={{ height: "100vh" }}>
         <Loader color="#93755E" size="xl" />
@@ -158,7 +166,7 @@ export default function LoginPage() {
             <IconAlertCircle size={40} color="#93755E" />
           </ThemeIcon>
 
-        <Text ta="center" fw={700} fz="lg">
+          <Text ta="center" fw={700} fz="lg">
             {modalMsg}
           </Text>
 
