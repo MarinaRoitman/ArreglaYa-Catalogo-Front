@@ -12,13 +12,13 @@ export default function TableComponent({ rows = [], aprobar, rechazar, type = 's
     setConfirmOpen(true);
   };
 
-  const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
+const handleConfirmSubmit = ({ id, fecha, montoTotal }) => {
     if (typeof aprobar === "function") {
       aprobar(id, { fecha, montoTotal });
     }
     setConfirmOpen(false);
   };
-
+  
   const showActionsColumn = type === 'solicitudes' || type === 'confirmados';
 
   return (

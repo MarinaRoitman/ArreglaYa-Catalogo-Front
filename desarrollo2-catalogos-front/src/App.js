@@ -116,18 +116,16 @@ function App() {
     return () => window.removeEventListener('auth-changed', onAuthChanged);
   }, [fetchJobs]);
 
-  // Acciones que refrescan listado al terminar
+
   const profesionalEnviaPresupuesto = async (id, { fecha, montoTotal }) => {
     try {
       await updatePedido(id, {
         fecha: fecha,
         tarifa: montoTotal,
-        estado: 'aprobado_por_prestador',
+        estado: 'aprobado_por_prestador'
       });
       fetchJobs();
-    } catch (error) {
-      console.error('Error al enviar el presupuesto:', error);
-    }
+    } catch (error) { console.error("Error al enviar el presupuesto:", error); }
   };
 
   const rechazarSolicitud = async (id) => {
