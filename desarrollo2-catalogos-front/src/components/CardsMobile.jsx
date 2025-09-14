@@ -43,16 +43,23 @@ const CardsMobile = ({ rows = [], aprobar, rechazar, calificar, type }) => {
               </>
             )}
 
-            {type === 'confirmados' && (
-              row.clienteConfirmo ? (
-                <MC.ActionIcon variant="light" color="green" aria-label="Cliente confirmó">
-                  <IconCircleCheck size={18} />
+         {type === 'confirmados' && (
+              <> {/* <-- Envolver en un fragmento */}
+                {row.clienteConfirmo ? (
+                  <MC.ActionIcon variant="light" color="green" aria-label="Cliente confirmó">
+                    <IconCircleCheck size={18} />
+                  </MC.ActionIcon>
+                ) : (
+                  <MC.ActionIcon variant="light" color="blue" aria-label="Esperando confirmación">
+                    <IconClockHour4 size={18} />
+                  </MC.ActionIcon>
+                )}
+                
+                {/* BOTÓN NUEVO PARA CANCELAR */}
+                <MC.ActionIcon variant="light" color="red" aria-label="Rechazar" onClick={() => rechazar?.(row.id)}>
+                  <IconX size={18} />
                 </MC.ActionIcon>
-              ) : (
-                <MC.ActionIcon variant="light" color="blue" aria-label="Esperando confirmación">
-                  <IconClockHour4 size={18} />
-                </MC.ActionIcon>
-              )
+              </>
             )}
             
             {type === 'realizados' && (

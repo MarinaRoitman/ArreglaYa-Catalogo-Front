@@ -188,14 +188,11 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route
-            path="/confirmados"
-            element={
-              <PrivateRoute>
-                <Confirmados data={confirmadosData} />
-              </PrivateRoute>
-            }
-          />
+<Route path="/confirmados"
+ element={<PrivateRoute><Confirmados 
+ data={confirmadosData} 
+ rechazar={rechazarSolicitud} 
+/></PrivateRoute>}/>
           <Route
             path="/realizados"
             element={

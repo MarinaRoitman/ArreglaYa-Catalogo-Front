@@ -59,8 +59,22 @@ export async function deletePedido(pedidoId) {
   const res = await fetch(`${API_URL}pedidos/${pedidoId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
+    // No se envía body, tal como funciona en Postman
   });
-  if (!res.ok) throw new Error("Error al eliminar el pedido");
-  // El delete a veces no devuelve contenido, así que podemos devolver el status
-  return { status: res.status };
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || "Error al cancelar el pedido");
+  }
+
+  // La respuesta de éxito de un DELETE puede tener o no cuerpo.
+  // Este código maneja ambos casos de forma segura.
+  const responseText = await res.text();
+  try {
+    // Intenta parsear como JSON si hay contenido
+    return JSON.parse(responseText);
+  } catch (e) {
+    // Si no hay contenido o no es JSON, devuelve un objeto de éxito
+    return { success: true, message: "Pedido cancelado correctamente." };
+  }
 }

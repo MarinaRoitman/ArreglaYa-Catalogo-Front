@@ -5,17 +5,17 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
+import ConfirmDelete from "../components/ModalBorrar"; // 
 
-export default function Confirmados({ data }) {
-  // 1. Reintroducimos los estados para cada filtro de texto
+export default function Confirmados({ data, rechazar }) { // <-- 2. Recibir prop "rechazar"
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
   const [fFecha, setFFecha] = useState("");
   const [fServ, setFServ] = useState("");
   const [fHab, setFHab] = useState("");
+  
 
-  // 2. Reintroducimos el memo para aplicar el filtro de texto a la data que llega desde App.js
   const filteredData = useMemo(() => {
     if (!Array.isArray(data)) return [];
     const match = (val, f) => String(val ?? '').toLowerCase().includes(f.trim().toLowerCase());
@@ -25,6 +25,25 @@ export default function Confirmados({ data }) {
     );
   }, [data, fNombre, fTel, fDir, fFecha, fServ, fHab]);
   
+  // --- 3. Lógica para el modal de confirmación ---
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const askDelete = (id) => { 
+    setDeletingId(id); 
+    setConfirmOpen(true); 
+  };
+  
+  const confirmDelete = () => { 
+    setDeleting(true); 
+    rechazar(deletingId); 
+    setConfirmOpen(false); 
+  };
+
+  const cancelDelete = () => setConfirmOpen(false);
+  // --- Fin de la lógica del modal ---
+
   const isMobile = useMediaQuery("(max-width: 48em)");
 
   return (
@@ -32,18 +51,24 @@ export default function Confirmados({ data }) {
       <Box p="lg" bg="white" style={{ borderRadius: 16, boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)" }}>
         <Text fw={700} fz="xl" mb="md" ta="center">Trabajos Confirmados</Text>
         
-        {/* 3. Pasamos todos los estados y setters al Filterbar */}
         <Filterbar {...{ fNombre, setFNombre, fTel, setFTel, fDir, setFDir, fFecha, setFFecha, fServ, setFServ, fHab, setFHab }} />
         
         {filteredData.length === 0 ? (
           <Text ta="center" mt="lg" c="dimmed">No se encontraron resultados</Text>
         ) : isMobile ? (
-          // 4. Usamos la data ya filtrada por el texto
-          <CardsMobile rows={filteredData} type="confirmados" />
+          <CardsMobile rows={filteredData} type="confirmados" rechazar={askDelete} /> // <-- 4. Pasar "askDelete"
         ) : (
-          <TableComponent rows={filteredData} type="confirmados" />
+          <TableComponent rows={filteredData} type="confirmados" rechazar={askDelete} /> // <-- 4. Pasar "askDelete"
         )}
       </Box>
+
+      {/* 5. Añadir el componente del modal */}
+      <ConfirmDelete 
+        opened={confirmOpen} 
+        onCancel={cancelDelete} 
+        onConfirm={confirmDelete} 
+        loading={deleting} 
+      />
     </AppLayout>
   );
 }
