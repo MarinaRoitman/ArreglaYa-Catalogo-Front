@@ -91,7 +91,7 @@ export default function Sidebar() {
         />
         
         <NavLink
-          label="Log out"
+          label="Cerrar Sesión"
           leftSection={<IconLogout size={18} />}
           color="red"
           variant="subtle"
