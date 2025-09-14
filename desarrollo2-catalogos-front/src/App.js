@@ -149,12 +149,15 @@ function App() {
       (job.estado === 'aprobado_por_prestador' || job.estado === 'aprobado_por_usuario') &&
       (!job.fecha || parseCustomDate(job.fecha) > ahora)
   );
-  const realizadosData = jobs.filter(
-    (job) =>
-      (job.estado === 'finalizado' || job.estado === 'cancelado') &&
-      job.fecha &&
-      parseCustomDate(job.fecha) < ahora
-  );
+  const realizadosData = jobs.filter((job) =>
+    job.estado === "finalizado"
+      ? job.fecha && parseCustomDate(job.fecha) < ahora
+      : job.estado === "cancelado"
+  );  
+
+  useEffect(() => {
+    console.log("realizadosData:", realizadosData);
+  }, [realizadosData]);
 
   // ⛔️ Bloqueá todo hasta terminar la carga
   if (loading) {
