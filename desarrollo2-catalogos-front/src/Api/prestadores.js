@@ -100,3 +100,20 @@ headers: getAuthHeaders(),
 if (!res.ok) throw new Error("Error al listar prestadores por habilidad");
 return res.json();
 }
+
+export async function cambiarContrasena(id, nuevaContrasena) {
+  const res = await fetch(`${API_URL}prestadores/${id}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      contrasena: nuevaContrasena, // <-- El único campo que necesita el backend
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.detail || 'No se pudo cambiar la contraseña.');
+  }
+
+  return res.json();
+}

@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-Box,
-Text,
-Group,
-Grid,
-TextInput,
-Button,
-Divider,
-Rating,
-Avatar,
-LoadingOverlay,
-Modal,
-Alert,
+  Box,
+  Text,
+  Group,
+  Grid,
+  TextInput,
+  Button,
+  Divider,
+  Rating,
+  Avatar,
+  LoadingOverlay,
+  Modal,
+  Alert,
+  Stack, 
 } from "@mantine/core";
 import { IconCircleCheck, IconAlertTriangle } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom"; 
@@ -21,9 +22,11 @@ import { fetchZonas } from "../Api/zonas";
 import {
 getPrestadorById,
 updatePrestador,
+cambiarContrasena,
 addZonaToPrestador,
 removeZonaFromPrestador,
 } from "../Api/prestadores";
+import ModalCambiarContrasena from '../components/ModalCambiarContrasena';
 import { listCalificaciones } from "../Api/calificacion";
 import { getUsuarioById } from "../Api/usuarios";
 
@@ -58,6 +61,11 @@ const [originalForm, setOriginalForm] = useState(null);
 const [originalZonasIds, setOriginalZonasIds] = useState([]);
 const [habilidades, setHabilidades] = useState([]);
 const [filtro, setFiltro] = useState("");
+
+const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+const [passwordSaving, setPasswordSaving] = useState(false);
+const [passwordError, setPasswordError] = useState('');
+const [passwordSuccessOpen, setPasswordSuccessOpen] = useState(false);
 
 const [loading, setLoading] = useState(false);
 const [saving, setSaving] = useState(false);
@@ -193,6 +201,24 @@ try {
 }
 };
 
+const handlePasswordChange = async (newPassword) => {
+  setPasswordSaving(true);
+  setPasswordError('');
+  try {
+    const prestadorId = localStorage.getItem('prestador_id');
+    if (!prestadorId) throw new Error('No se encontró el ID del prestador');
+
+    await cambiarContrasena(prestadorId, newPassword);
+
+    setPasswordModalOpen(false);
+    setPasswordSuccessOpen(true);
+  } catch (err) {
+    setPasswordError(err.message || 'Ocurrió un error inesperado.');
+  } finally {
+    setPasswordSaving(false);
+  }
+};
+
 // desactivar cuenta
 const handleBaja = async () => {
 try {
@@ -295,6 +321,15 @@ return (
                 disabled={saving || (!hasFormChanges && !hasZonaChanges)}
             >
                 Actualizar
+            </Button>
+
+            {/* BOTÓN NUEVO */}
+            <Button
+                variant="outline"
+                onClick={() => setPasswordModalOpen(true)}
+                disabled={saving}
+            >
+                Cambiar Contraseña
             </Button>
 
             <Button
@@ -436,6 +471,31 @@ return (
         </Button>
         </Group>
     </Modal>
+    
+<ModalCambiarContrasena
+  opened={passwordModalOpen}
+  onClose={() => setPasswordModalOpen(false)}
+  onSubmit={handlePasswordChange}
+  loading={passwordSaving}
+  error={passwordError}
+  clearError={() => setPasswordError('')}
+/>
+
+<Modal
+  opened={passwordSuccessOpen}
+  onClose={() => setPasswordSuccessOpen(false)}
+  centered
+  title={<Text fw={600}>¡Éxito!</Text>}
+>
+  <Stack align="center">
+    <IconCircleCheck size={48} color="green" />
+    <Text>Tu contraseña se actualizó correctamente.</Text>
+    <Button color="#93755E" onClick={() => setPasswordSuccessOpen(false)} mt="md">
+      Aceptar
+    </Button>
+  </Stack>
+</Modal>
+
     </Box>
 </AppLayout>
 );
