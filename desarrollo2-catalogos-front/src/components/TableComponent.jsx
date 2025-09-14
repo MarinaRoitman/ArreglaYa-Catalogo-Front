@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import * as MC from "@mantine/core";
-import { IconCheck, IconX, IconClockHour4, IconCircleCheck } from "@tabler/icons-react";
+import { IconCheck, IconX, IconCircleCheck } from "@tabler/icons-react";
 import ConfirmarSolicitudModal from "../components/ModalSolicitud";
 
 export default function TableComponent({ rows = [], aprobar, rechazar, type = 'solicitudes' }) {
