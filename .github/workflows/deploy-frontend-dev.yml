@@ -46,7 +46,7 @@ jobs:
 
       - name: Build
         env:
-          # Ajustá al nombre que use tu front: VITE_*, REACT_APP_*, NEXT_PUBLIC_*...
+          # Cambiá el nombre si tu front usa REACT_APP_* / NEXT_PUBLIC_* / etc.
           VITE_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
           npm run build
@@ -86,10 +86,6 @@ jobs:
 
       - name: Restart Caddy + verify files (DEV)
         uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ci
-          password: ${{ secrets.EC2_SSH_PASSWORD }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
