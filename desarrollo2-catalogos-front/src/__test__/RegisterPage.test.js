@@ -10,32 +10,12 @@ jest.mock("react-router-dom", () => ({
 
 global.fetch = jest.fn();
 
-describe("RegisterPage", () => {
+describe("RegisterPage funcional", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("renderiza el formulario", () => {
-    render(
-      <MemoryRouter>
-        <RegisterPage />
-      </MemoryRouter>
-    );
-    expect(screen.getByPlaceholderText(/Nombre/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Apellido/i)).toBeInTheDocument();
-    expect(screen.getByText(/Guardar/i)).toBeInTheDocument();
-  });
-
-
-  it("muestra modal de éxito y navega al login", async () => {
-    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-
-    render(
-      <MemoryRouter>
-        <RegisterPage />
-      </MemoryRouter>
-    );
-
+  const fillForm = () => {
     fireEvent.change(screen.getByPlaceholderText(/Nombre/i), {
       target: { value: "Martina", name: "nombre" },
     });
@@ -46,7 +26,7 @@ describe("RegisterPage", () => {
       target: { value: "marti@mail.com", name: "email" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Teléfono/i), {
-      target: { value: "123456", name: "telefono" },
+      target: { value: "123456789", name: "telefono" },
     });
     fireEvent.change(screen.getByPlaceholderText(/Dirección/i), {
       target: { value: "Calle 123", name: "direccion" },
@@ -54,11 +34,95 @@ describe("RegisterPage", () => {
     fireEvent.change(screen.getByPlaceholderText(/DNI/i), {
       target: { value: "45678901", name: "dni" },
     });
+  };
+
+  it("muestra error si las contraseñas no coinciden", async () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    fillForm();
     fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
-      target: { value: "1234", name: "password" },
+      target: { value: "Password1!", name: "password" },
     });
     fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
-      target: { value: "1234", name: "repitaContrasena" },
+      target: { value: "OtraCosa1!", name: "repitaContrasena" },
+    });
+
+    fireEvent.click(screen.getByText(/Guardar/i));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Las contraseñas no coinciden/i)
+      ).toBeInTheDocument()
+    );
+  });
+
+  it("muestra error si la contraseña es demasiado corta", async () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    fillForm();
+    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
+      target: { value: "123", name: "password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
+      target: { value: "123", name: "repitaContrasena" },
+    });
+
+    fireEvent.click(screen.getByText(/Guardar/i));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/al menos 8 caracteres/i)
+      ).toBeInTheDocument()
+    );
+  });
+
+  it("muestra error si la contraseña no cumple complejidad", async () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    fillForm();
+    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
+      target: { value: "soloLetras", name: "password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
+      target: { value: "soloLetras", name: "repitaContrasena" },
+    });
+
+    fireEvent.click(screen.getByText(/Guardar/i));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/incluir letras, números y caracteres especiales/i)
+      ).toBeInTheDocument()
+    );
+  });
+
+  it("registro exitoso → modal verde → navega a login", async () => {
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    fillForm();
+    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
+      target: { value: "Password1!", name: "password" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
+      target: { value: "Password1!", name: "repitaContrasena" },
     });
 
     fireEvent.click(screen.getByText(/Guardar/i));
@@ -69,15 +133,14 @@ describe("RegisterPage", () => {
       ).toBeInTheDocument()
     );
 
-    // clic en el botón del modal
     fireEvent.click(screen.getByText(/Ir a Login/i));
     expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
-  it("muestra modal de error si el registro falla", async () => {
+  it("muestra error si el backend responde mal", async () => {
     fetch.mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ detail: "Email ya existe" }),
+      json: async () => ({ detail: "Email ya registrado" }),
     });
 
     render(
@@ -86,29 +149,12 @@ describe("RegisterPage", () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/Nombre/i), {
-      target: { value: "Martina", name: "nombre" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Apellido/i), {
-      target: { value: "Lopez", name: "apellido" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
-      target: { value: "marti@mail.com", name: "email" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Teléfono/i), {
-      target: { value: "123456", name: "telefono" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Dirección/i), {
-      target: { value: "Calle 123", name: "direccion" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/DNI/i), {
-      target: { value: "45678901", name: "dni" },
-    });
+    fillForm();
     fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
-      target: { value: "1234", name: "password" },
+      target: { value: "Password1!", name: "password" },
     });
     fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
-      target: { value: "1234", name: "repitaContrasena" },
+      target: { value: "Password1!", name: "repitaContrasena" },
     });
 
     fireEvent.click(screen.getByText(/Guardar/i));
@@ -118,6 +164,6 @@ describe("RegisterPage", () => {
         screen.getByText(/Error en el registro/i)
       ).toBeInTheDocument()
     );
-    expect(screen.getByText(/Email ya existe/i)).toBeInTheDocument();
+    expect(screen.getByText(/Email ya registrado/i)).toBeInTheDocument();
   });
 });

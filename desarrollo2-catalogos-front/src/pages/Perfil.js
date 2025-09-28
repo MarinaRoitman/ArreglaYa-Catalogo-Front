@@ -1,21 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Box,
-  Text,
-  Group,
-  Grid,
-  TextInput,
-  Button,
-  Divider,
-  Rating,
-  Avatar,
-  LoadingOverlay,
-  Modal,
-  Alert,
-  Stack, 
+Box,
+Text,
+Group,
+Grid,
+TextInput,
+Button,
+LoadingOverlay,
+Modal,
+Alert,
+Stack,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { IconCircleCheck, IconAlertTriangle } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Select from "react-select";
 import { fetchZonas } from "../Api/zonas";
@@ -25,12 +23,11 @@ updatePrestador,
 cambiarContrasena,
 addZonaToPrestador,
 removeZonaFromPrestador,
+getPrestadores
 } from "../Api/prestadores";
-import ModalCambiarContrasena from '../components/ModalCambiarContrasena';
-import { listCalificaciones } from "../Api/calificacion";
-import { getUsuarioById } from "../Api/usuarios";
+import ModalCambiarContrasena from "../components/ModalCambiarContrasena";
 
-// utilidades de comparación
+/* utilidades  */
 const norm = (v) =>
 typeof v === "string" ? v.trim() : v == null ? "" : String(v);
 const shallowEqualForm = (a, b, keys) =>
@@ -44,8 +41,9 @@ return true;
 };
 
 export default function Perfil() {
-const [reviews, setReviews] = useState([]);
-const navigate = useNavigate(); 
+const navigate = useNavigate();
+const isDesktop = useMediaQuery("(min-width: 1200px)");
+
 const [zonas, setZonas] = useState([]);
 const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 const [form, setForm] = useState({
@@ -57,6 +55,14 @@ telefono: "",
 dni: "",
 });
 
+const [errors, setErrors] = useState({
+nombre: "",
+apellido: "",
+email: "",
+direccion: "",
+telefono: "",
+});
+
 const [originalForm, setOriginalForm] = useState(null);
 const [originalZonasIds, setOriginalZonasIds] = useState([]);
 const [habilidades, setHabilidades] = useState([]);
@@ -64,14 +70,23 @@ const [filtro, setFiltro] = useState("");
 
 const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 const [passwordSaving, setPasswordSaving] = useState(false);
-const [passwordError, setPasswordError] = useState('');
+const [passwordError, setPasswordError] = useState("");
 const [passwordSuccessOpen, setPasswordSuccessOpen] = useState(false);
 
 const [loading, setLoading] = useState(false);
 const [saving, setSaving] = useState(false);
 const [successOpen, setSuccessOpen] = useState(false);
 const [error, setError] = useState("");
-const [bajaOpen, setBajaOpen] = useState(false); // modal de baja
+const [bajaOpen, setBajaOpen] = useState(false);
+
+// máximos de caracteres
+const MAX = {
+    nombre: 30,
+    apellido: 30,
+    email: 60,
+    direccion: 60,
+    telefono: 15,
+};
 
 useEffect(() => {
 const load = async () => {
@@ -80,10 +95,9 @@ const load = async () => {
     const prestadorId = localStorage.getItem("prestador_id");
     if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    const [zonasRes, prestador, calificaciones] = await Promise.all([
+    const [zonasRes, prestador] = await Promise.all([
         fetchZonas(),
         getPrestadorById(prestadorId),
-        listCalificaciones(),
     ]);
 
     setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
@@ -107,28 +121,6 @@ const load = async () => {
     setOriginalZonasIds(prestadorZonas.map((z) => z.value));
 
     setHabilidades(prestador.habilidades || []);
-
-    const calificacionesPrestador = calificaciones.filter(
-        (c) => String(c.id_prestador) === String(prestadorId)
-    );
-
-    const reviewsConUsuarios = await Promise.all(
-        calificacionesPrestador.map(async (c) => {
-        try {
-            const usuario = await getUsuarioById(c.id_usuario);
-            return {
-            ...c,
-            nombre_usuario: `${usuario?.nombre || "Usuario"} ${
-                usuario?.apellido || ""
-            }`.trim(),
-            };
-        } catch {
-            return { ...c, nombre_usuario: `Usuario #${c.id_usuario}` };
-        }
-        })
-    );
-
-    setReviews(reviewsConUsuarios);
     } catch (err) {
     setError(err.message || "Error al cargar el perfil");
     } finally {
@@ -140,7 +132,41 @@ load();
 
 const handleChange = (key) => (e) => {
 const val = e?.target ? e.target.value : e;
-setForm((prev) => ({ ...prev, [key]: val }));
+
+// Sanitizar + recortar por máximo
+let newVal =
+    key === "telefono"
+    ? (val || "").replace(/\D+/g, "")
+    : typeof val === "string"
+    ? val
+    : String(val ?? "");
+
+if (MAX[key]) newVal = newVal.slice(0, MAX[key]); // límite de caracteres
+
+setForm((prev) => ({ ...prev, [key]: newVal }));
+
+// Validación por campo
+setErrors((prev) => {
+    const draft = { ...prev };
+    if (key === "nombre") draft.nombre = newVal?.trim() ? "" : "El nombre es obligatorio.";
+    if (key === "apellido") draft.apellido = newVal?.trim() ? "" : "El apellido es obligatorio.";
+    if (key === "direccion") draft.direccion = newVal?.trim() ? "" : "La dirección es obligatoria.";
+    if (key === "telefono") {
+    draft.telefono = !newVal?.trim()
+        ? "El teléfono es obligatorio."
+        : /^\d+$/.test(newVal)
+        ? ""
+        : "El teléfono debe tener solo números.";
+    }
+    if (key === "email") {
+    if (!newVal?.trim()) draft.email = "El mail es obligatorio.";
+    else
+        draft.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newVal.trim())
+        ? ""
+        : "Ingresá un e-mail válido (con @ y dominio).";
+    }
+    return draft;
+});
 };
 
 const formKeys = ["nombre", "apellido", "direccion", "email", "telefono", "dni"];
@@ -151,16 +177,42 @@ const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 
 const handleSubmit = async () => {
 try {
-    setSaving(true);
-    const prestadorId = localStorage.getItem("prestador_id");
-    if (!prestadorId) throw new Error("No se encontró prestador_id");
+setSaving(true);
+const prestadorId = localStorage.getItem("prestador_id");
+if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    if (!hasFormChanges && !hasZonaChanges) {
+// Sin cambios en nada
+if (!hasFormChanges && !hasZonaChanges) {
     setSuccessOpen(true);
     return;
-    }
+}
 
-    if (!hasFormChanges && hasZonaChanges) {
+// Si hay cambios en el formulario, validar
+if (hasFormChanges) {
+    const { isValid, nextErrors } = validateForm(form);
+    setErrors(nextErrors);
+    if (!isValid) {
+    setError("Revisá los campos marcados.");
+    return; // NO seguimos si es inválido
+    }
+}
+
+// Chequeo de disponibilidad de e-mail (lógica de negocio)
+  const email = form.email?.trim();
+  if (email) {
+    try {
+      const available = await isEmailAvailable(email);
+      if (!available) {
+        setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
+        setError("Revisá los campos marcados.");
+        return;
+      }
+    } catch {
+    }
+  }
+
+// Si solo cambian zonas
+if (!hasFormChanges && hasZonaChanges) {
     const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
     const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
     for (const id of toAdd) await addZonaToPrestador(prestadorId, id);
@@ -168,58 +220,59 @@ try {
     setOriginalZonasIds(selectedZonaIds);
     setSuccessOpen(true);
     return;
-    }
+}
 
-    const payload = {
+// Cambios en formulario (ya válidos) + zonas (si las hay)
+const payload = {
     nombre: form.nombre,
     apellido: form.apellido,
     direccion: form.direccion,
     email: form.email,
     telefono: form.telefono,
     activo: true,
-    };
-    Object.keys(payload).forEach((k) => {
+};
+Object.keys(payload).forEach((k) => {
     if (payload[k] === "" || payload[k] == null) delete payload[k];
-    });
+});
 
-    await updatePrestador(prestadorId, payload);
+await updatePrestador(prestadorId, payload);
 
-    if (hasZonaChanges) {
+if (hasZonaChanges) {
     const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
     const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
     for (const id of toAdd) await addZonaToPrestador(prestadorId, id);
     for (const id of toRemove) await removeZonaFromPrestador(prestadorId, id);
     setOriginalZonasIds(selectedZonaIds);
-    }
+}
 
-    setOriginalForm({ ...originalForm, ...form });
-    setSuccessOpen(true);
+setOriginalForm({ ...originalForm, ...form });
+setSuccessOpen(true);
+setError(""); // limpiamos error general si lo había
 } catch (err) {
-    setError(err.message || "Error al guardar cambios");
+setError(err.message || "Error al guardar cambios");
 } finally {
-    setSaving(false);
+setSaving(false);
 }
 };
 
 const handlePasswordChange = async (newPassword) => {
-  setPasswordSaving(true);
-  setPasswordError('');
-  try {
-    const prestadorId = localStorage.getItem('prestador_id');
-    if (!prestadorId) throw new Error('No se encontró el ID del prestador');
+setPasswordSaving(true);
+setPasswordError("");
+try {
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró el ID del prestador");
 
     await cambiarContrasena(prestadorId, newPassword);
 
     setPasswordModalOpen(false);
     setPasswordSuccessOpen(true);
-  } catch (err) {
-    setPasswordError(err.message || 'Ocurrió un error inesperado.');
-  } finally {
+} catch (err) {
+    setPasswordError(err.message || "Ocurrió un error inesperado.");
+} finally {
     setPasswordSaving(false);
-  }
+}
 };
 
-// desactivar cuenta
 const handleBaja = async () => {
 try {
     setSaving(true);
@@ -227,15 +280,9 @@ try {
     if (!prestadorId) throw new Error("No se encontró prestador_id");
 
     await updatePrestador(prestadorId, { activo: false });
-
-    // limpiar token/localStorage si corresponde
     localStorage.removeItem("token");
     localStorage.removeItem("prestador_id");
-
-    // cerrar modal
     setBajaOpen(false);
-
-    // ✅ 3) redirigir al login
     navigate("/login", { replace: true });
 } catch (err) {
     setError(err.message || "Error al dar de baja la cuenta");
@@ -253,6 +300,49 @@ return (habilidades || []).filter(
 );
 }, [habilidades, filtro]);
 
+// manejos de erroes en los campos de texto
+const validateForm = (data = form) => {
+const nextErrors = { nombre: "", apellido: "", email: "", direccion: "", telefono: "" };
+
+// Requeridos
+if (!data.nombre?.trim()) nextErrors.nombre = "El nombre es obligatorio.";
+if (!data.apellido?.trim()) nextErrors.apellido = "El apellido es obligatorio.";
+if (!data.direccion?.trim()) nextErrors.direccion = "La dirección es obligatoria.";
+if (!data.telefono?.trim()) nextErrors.telefono = "El teléfono es obligatorio.";
+if (!data.email?.trim()) nextErrors.email = "El mail es obligatorio.";
+
+// Email básico
+if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+    nextErrors.email = "Ingresá un e-mail válido (con @ y dominio).";
+}
+
+// Teléfono: solo dígitos
+if (data.telefono && !/^\d+$/.test(data.telefono.trim())) {
+    nextErrors.telefono = "El teléfono debe tener solo números.";
+}
+
+const isValid = Object.values(nextErrors).every((v) => !v);
+return { isValid, nextErrors };
+};
+
+// Verifica si el email está disponible (case-insensitive) ignorando el propio prestador
+const isEmailAvailable = async (email) => {
+  const e = (email || "").trim().toLowerCase();
+  if (!e) return false; // vacío no es válido
+
+  const prestadorId = localStorage.getItem("prestador_id");
+  const lista = await getPrestadores();
+
+  // buscá coincidencia exacta (insensible a may/min) en otro prestador distinto a mí
+  const clash = (lista || []).some((p) => {
+    const pid = String(p.id);
+    const mail = (p.email || "").trim().toLowerCase();
+    return pid !== String(prestadorId) && mail === e;
+  });
+
+  return !clash;
+};
+
 return (
 <AppLayout>
     <Box
@@ -262,6 +352,9 @@ return (
         position: "relative",
         borderRadius: 16,
         boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+        width: "100%",
+        maxWidth: isDesktop ? 1200 : "95%",
+        margin: "0 auto",
     }}
     >
     <LoadingOverlay visible={loading || saving} zIndex={1000} />
@@ -276,20 +369,41 @@ return (
     )}
 
     <Grid gutter="xl" align="stretch">
+        {/* Columna izquierda: Editar Perfil */}
         <Grid.Col span={{ base: 12, md: 7 }}>
-        <Box p="lg" bg="white" style={{ borderRadius: 16 }}>
+        <Box
+            p="lg"
+            bg="white"
+            style={{
+            borderRadius: 16,
+            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+            }}
+        >
             <Text fw={600} fz="lg" mb="md" ta="center">
             Editar Perfil
             </Text>
 
-            {/* campos */}
             <Group grow mb="md">
-            <TextInput label="Nombre" value={form.nombre} onChange={handleChange("nombre")} />
-            <TextInput label="Apellido" value={form.apellido} onChange={handleChange("apellido")} />
+            <TextInput label="Nombre" value={form.nombre} onChange={handleChange("nombre")} error={errors.nombre} maxLength={MAX.nombre}/>
+            <TextInput label="Apellido" value={form.apellido} onChange={handleChange("apellido")} error={errors.apellido} maxLength={MAX.apellido}/>
             </Group>
 
             <Group grow mb="md">
-            <TextInput label="Mail" value={form.email} onChange={handleChange("email")} />
+            <TextInput label="Mail" value={form.email} onChange={handleChange("email")} error={errors.email} maxLength={MAX.email}
+            onBlur={async () => {
+                // si el formato es válido, chequeá disponibilidad
+                const email = form.email?.trim();
+                if (email && !errors.email) {
+                try {
+                    const available = await isEmailAvailable(email);
+                    if (!available) {
+                        setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
+                    }
+                    } catch {
+                    // silencioso: si falla la red, no pisamos otros errores
+                    }
+                }
+                }}/>
             <TextInput label="DNI" value={form.dni} disabled />
             </Group>
 
@@ -306,14 +420,13 @@ return (
                 onChange={(opts) => setZonasSeleccionadas(opts || [])}
                 />
             </Box>
-            <TextInput label="Dirección" value={form.direccion} onChange={handleChange("direccion")} />
+            <TextInput label="Dirección" value={form.direccion} onChange={handleChange("direccion")} error={errors.direccion} maxLength={MAX.direccion}/>
             </Group>
 
             <Group grow mb="md">
-            <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} />
+            <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} error={errors.telefono} maxLength={MAX.telefono}/>
             </Group>
 
-            {/* Botones Actualizar y Baja */}
             <Group justify="center" mt="md">
             <Button
                 color="#93755E"
@@ -322,27 +435,31 @@ return (
             >
                 Actualizar
             </Button>
-
-            {/* BOTÓN NUEVO */}
-            <Button
-                variant="outline"
-                onClick={() => setPasswordModalOpen(true)}
-                disabled={saving}
-            >
+            <Button variant="outline" onClick={() => setPasswordModalOpen(true)} disabled={saving}>
                 Cambiar Contraseña
             </Button>
-
-            <Button
-                color="red"
-                variant="outline"
-                onClick={() => setBajaOpen(true)}
-                disabled={saving}
-            >
+            <Button color="red" variant="outline" onClick={() => setBajaOpen(true)} disabled={saving}>
                 Dar de baja
             </Button>
             </Group>
+        </Box>
+        </Grid.Col>
 
-            <Divider my="sm" label="Tus Habilidades" labelPosition="center" />
+        {/* Columna derecha: Habilidades con scroll interno */}
+        <Grid.Col span={{ base: 12, md: 5 }}>
+        <Box
+            p="lg"
+            bg="white"
+            style={{
+            borderRadius: 16,
+            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+            height: "100%",
+            }}
+        >
+            <Text fw={600} fz="lg" mb="md" ta="center">
+            Mis Habilidades
+            </Text>
+
             <TextInput
             placeholder="Buscar habilidad"
             mb="sm"
@@ -350,10 +467,16 @@ return (
             onChange={(e) => setFiltro(e.target.value)}
             />
 
+            {/* ⬇️ contenedor scrolleable */}
             <Box
             mih={100}
-            mb="md"
-            style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8 }}
+            style={{
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: 8,
+                maxHeight: 350,        // alto máximo
+                overflowY: "auto",     // scroll vertical interno
+            }}
             >
             {habilidadesFiltradas.length === 0 ? (
                 <Text c="dimmed" fz="sm">
@@ -367,51 +490,6 @@ return (
                     </Text>
                     <Text fz="xs" c="dimmed">
                     {h.nombre_rubro}
-                    </Text>
-                </Box>
-                ))
-            )}
-            </Box>
-        </Box>
-        </Grid.Col>
-
-        {/* Columna derecha (calificaciones) */}
-        <Grid.Col span={{ base: 12, md: 5 }}>
-        <Box p="lg" bg="white" style={{ borderRadius: 16 }}>
-            <Text fw={600} fz="lg" mb="md" ta="center">
-            Calificaciones
-            </Text>
-            <Group justify="center" mb="md">
-            <Rating
-                value={
-                reviews.length > 0
-                    ? reviews.reduce((sum, r) => sum + (r.estrellas || 0), 0) / reviews.length
-                    : 0
-                }
-                readOnly
-            />
-            </Group>
-            <Text ta="center" mb="md">
-            ({reviews.length} Reviews)
-            </Text>
-            <Divider my="sm" />
-            <Box style={{ maxHeight: 300, overflowY: "auto" }}>
-            {reviews.length === 0 ? (
-                <Text fz="sm" c="dimmed">
-                Este prestador aún no tiene calificaciones
-                </Text>
-            ) : (
-                reviews.map((r) => (
-                <Box key={r.id} mb="md">
-                    <Group>
-                    <Avatar radius="xl" color="#93755E">
-                        {r.nombre_usuario ? r.nombre_usuario[0] : "U"}
-                    </Avatar>
-                    <Text fw={600}>{r.nombre_usuario}</Text>
-                    <Rating value={r.estrellas} readOnly size="sm" />
-                    </Group>
-                    <Text fz="sm" c="dimmed" mt={4}>
-                    {r.descripcion || "Sin comentario"}
                     </Text>
                 </Box>
                 ))
@@ -459,9 +537,7 @@ return (
         </Group>
         }
     >
-        <Text mb="md">
-        ¿Estás seguro de que querés dar de baja tu cuenta?
-        </Text>
+        <Text mb="md">¿Estás seguro de que querés dar de baja tu cuenta?</Text>
         <Group justify="end">
         <Button variant="default" onClick={() => setBajaOpen(false)}>
             Cancelar
@@ -471,31 +547,30 @@ return (
         </Button>
         </Group>
     </Modal>
-    
-<ModalCambiarContrasena
-  opened={passwordModalOpen}
-  onClose={() => setPasswordModalOpen(false)}
-  onSubmit={handlePasswordChange}
-  loading={passwordSaving}
-  error={passwordError}
-  clearError={() => setPasswordError('')}
-/>
 
-<Modal
-  opened={passwordSuccessOpen}
-  onClose={() => setPasswordSuccessOpen(false)}
-  centered
-  title={<Text fw={600}>¡Éxito!</Text>}
->
-  <Stack align="center">
-    <IconCircleCheck size={48} color="green" />
-    <Text>Tu contraseña se actualizó correctamente.</Text>
-    <Button color="#93755E" onClick={() => setPasswordSuccessOpen(false)} mt="md">
-      Aceptar
-    </Button>
-  </Stack>
-</Modal>
+    <ModalCambiarContrasena
+        opened={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        onSubmit={handlePasswordChange}
+        loading={passwordSaving}
+        error={passwordError}
+        clearError={() => setPasswordError("")}
+    />
 
+    <Modal
+        opened={passwordSuccessOpen}
+        onClose={() => setPasswordSuccessOpen(false)}
+        centered
+        title={<Text fw={600}>¡Éxito!</Text>}
+    >
+        <Stack align="center">
+        <IconCircleCheck size={48} color="green" />
+        <Text>Tu contraseña se actualizó correctamente.</Text>
+        <Button color="#93755E" onClick={() => setPasswordSuccessOpen(false)} mt="md">
+            Aceptar
+        </Button>
+        </Stack>
+    </Modal>
     </Box>
 </AppLayout>
 );

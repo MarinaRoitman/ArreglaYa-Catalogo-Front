@@ -10,6 +10,7 @@ import Confirmados from './pages/Confirmados';
 import Realizados from './pages/Realizados';
 import Habilidades from './pages/Habilidades';
 import Perfil from './pages/Perfil';
+import Calificaciones from './pages/Calificaciones';
 import PrivateRoute from './PrivateRoutes';
 
 // Servicios API
@@ -212,6 +213,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Perfil />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/calificaciones"
+            element={
+              <PrivateRoute>
+                <Calificaciones />
               </PrivateRoute>
             }
           />
