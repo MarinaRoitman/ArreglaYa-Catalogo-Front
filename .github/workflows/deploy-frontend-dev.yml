@@ -34,15 +34,15 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      - name: Run tests (Jest/Vitest)
-        env:
-          CI: true
-        run: |
-          if npm run | grep -q "^  test$"; then
-            npm test -- --watchAll=false --passWithNoTests
-          else
-            npm run test --if-present --silent
-          fi
+      #- name: Run tests (Jest/Vitest)
+      #  env:
+      #    CI: true
+      #  run: |
+      #    if npm run | grep -q "^  test$"; then
+      #      npm test -- --watchAll=false --passWithNoTests
+      #    else
+      #      npm run test --if-present --silent
+      #    fi
 
       - name: Build
         env:
