@@ -10,13 +10,18 @@
 
 /* Contenedor principal del formulario */
 .form-container {
+  max-width: 800px; /* Aumentado de 600px a 800px */
+  margin: 40px auto;
+  padding: 20px;
   background-color: #ffffff;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Cambiado de repeat(2, 1fr) a 1fr */
+  gap: 20px;
 }
 
 /* Contenedor del logo y título */

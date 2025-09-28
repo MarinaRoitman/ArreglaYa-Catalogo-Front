@@ -23,18 +23,47 @@ export default function RegisterPage() {
   const [modalMsg, setModalMsg] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleChange = (e) => {
+const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "dni" || name === "telefono") {
+      const isNumeric = value === '' || /^[0-9\b]+$/.test(value);
+      if (!isNumeric) {
+        return; 
+      }
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // --- INICIO DE CORRECCIONES ---
+
+    // 1. Validar que las contraseñas coincidan
     if (formData.password !== formData.repitaContrasena) {
       setModalMsg("Las contraseñas no coinciden");
+      setIsSuccess(false);
+      setModalOpen(true);
+      return;
+    }
+
+    // 2. Validar longitud mínima de la contraseña
+    if (formData.password.length < 8) {
+      setModalMsg("La contraseña debe tener al menos 8 caracteres");
+      setIsSuccess(false);
+      setModalOpen(true);
+      return;
+    }
+
+    // 3. Validar complejidad de la contraseña (letras, números y símbolos)
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setModalMsg("La contraseña debe incluir letras, números y caracteres especiales");
       setIsSuccess(false);
       setModalOpen(true);
       return;
@@ -83,83 +112,91 @@ export default function RegisterPage() {
           <p>Servicios a domicilio</p>
         </div>
 
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="nombre"
-            placeholder="Nombre"
-            value={formData.nombre}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="apellido"
-            placeholder="Apellido"
-            value={formData.apellido}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="tel"
-            name="telefono"
-            placeholder="Teléfono"
-            value={formData.telefono}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="direccion"
-            placeholder="Dirección"
-            value={formData.direccion}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="dni"
-            placeholder="DNI"
-            value={formData.dni}
-            onChange={handleChange}
-            required
-          />
-          <input
-            className="full-width"
-            type="password"
-            name="password"
-            placeholder="Contraseña"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-          <input
-            className="full-width"
-            type="password"
-            name="repitaContrasena"
-            placeholder="Repita la Contraseña"
-            value={formData.repitaContrasena}
-            onChange={handleChange}
-            required
-          />
+      <form className="form-grid" onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="nombre"
+          placeholder="Nombre"
+          value={formData.nombre}
+          onChange={handleChange}
+          required
+          maxLength="50" 
+        />
+        <input
+          type="text"
+          name="apellido"
+          placeholder="Apellido"
+          value={formData.apellido}
+          onChange={handleChange}
+          required
+          maxLength="50"
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          maxLength="100"
+        />
+        <input
+          type="tel"
+          name="telefono"
+          placeholder="Teléfono"
+          value={formData.telefono}
+          onChange={handleChange}
+          required
+          maxLength="15"
+        />
+        <input
+          type="text"
+          name="direccion"
+          placeholder="Dirección"
+          value={formData.direccion}
+          onChange={handleChange}
+          required
+          maxLength="100"
+        />
+        <input
+          type="text"
+          name="dni"
+          placeholder="DNI"
+          value={formData.dni}
+          onChange={handleChange}
+          required
+          maxLength="8"
+        />
+        <input
+          className="full-width"
+          type="password"
+          name="password"
+          placeholder="Contraseña"
+          value={formData.password}
+          onChange={handleChange}
+          required
+          maxLength="50"
+        />
+        <input
+          className="full-width"
+          type="password"
+          name="repitaContrasena"
+          placeholder="Repita la Contraseña"
+          value={formData.repitaContrasena}
+          onChange={handleChange}
+          required
+          maxLength="50"
+        />
 
-          <div className="btn-container">
-            <button type="submit" className="btn btn-primary">
-              Guardar
-            </button>
-            <Link to="/login" className="btn btn-secondary">
-              Cancelar
-            </Link>
-          </div>
-        </form>
+        <div className="btn-container">
+          <button type="submit" className="btn btn-primary">
+            Guardar
+          </button>
+          <Link to="/login" className="btn btn-secondary">
+            Cancelar
+          </Link>
+        </div>
+      </form>
       </div>
 
       {/* Modal elegante */}
