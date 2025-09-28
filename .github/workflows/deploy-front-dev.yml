@@ -1,0 +1,104 @@
+name: Deploy Frontend to EC2 (dev)
+
+on:
+  push:
+    branches: [ "dev" ]
+    paths:
+      - 'desarrollo2-catalogos-front/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-front-dev
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy-dev:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: desarrollo2-catalogos-front
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desarrollo2-catalogos-front/package-lock.json
+
+      - name: Install deps
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Run tests (Jest/Vitest)
+        env:
+          CI: true
+        run: |
+          if npm run | grep -q "^  test$"; then
+            npm test -- --watchAll=false --passWithNoTests
+          else
+            npm run test --if-present --silent
+          fi
+
+      - name: Build
+        env:
+          # Ajustá al nombre que use tu front: VITE_*, REACT_APP_*, NEXT_PUBLIC_*...
+          VITE_API_URL: "https://apidev.desarrollo2-catalogos.online"
+        run: |
+          npm run build
+          if [ -d "dist" ]; then
+            echo "BUILD_DIR=dist" >> $GITHUB_ENV
+          elif [ -d "build" ]; then
+            echo "BUILD_DIR=build" >> $GITHUB_ENV
+          else
+            echo "No dist/ or build/ directory found" && exit 1
+          fi
+
+      - name: Debug secrets (masked)
+        shell: bash
+        working-directory: .
+        run: |
+          set -e
+          echo "EC2_HOST: ${{ secrets.EC2_HOST }}"
+          echo "EC2_USER: ${{ secrets.EC2_USER }}"
+          test -n "${{ secrets.EC2_SSH_PASSWORD }}" || { echo "ERROR: Missing secret EC2_SSH_PASSWORD" >&2; exit 1; }
+          LEN=$(printf "%s" "${{ secrets.EC2_SSH_PASSWORD }}" | wc -c | tr -d ' ')
+          HASH=$(printf "%s" "${{ secrets.EC2_SSH_PASSWORD }}" | sha256sum | cut -c1-12)
+          echo "EC2_SSH_PASSWORD length: ${LEN}"
+          echo "EC2_SSH_PASSWORD sha256 (first 12): ${HASH}"
+
+      - name: Copy static assets to EC2 (DEV)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ci
+          password: ${{ secrets.EC2_SSH_PASSWORD }}
+          source: "desarrollo2-catalogos-front/${{ env.BUILD_DIR }}/**"
+          target: "/home/ubuntu/catalogo/frontend-dev/dist"
+          strip_components: 2
+          overwrite: true
+          rm: true
+          timeout: 2m
+
+      - name: Restart Caddy + verify files (DEV)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ci
+          password: ${{ secrets.EC2_SSH_PASSWORD }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ci
+          password: ${{ secrets.EC2_SSH_PASSWORD }}
+          script: |
+            set -e
+            cd /home/ubuntu/catalogo
+            sudo docker compose restart caddy
+            echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
+            ls -lah frontend-dev/dist | head -n 50
+            echo "== /srv/frontend-dev inside caddy =="
+            sudo docker compose exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
