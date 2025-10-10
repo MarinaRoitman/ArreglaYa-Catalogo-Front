@@ -13,8 +13,55 @@ import {
 import { IconAlertCircle } from "@tabler/icons-react";
 
 const BASE_URL = "https://api.desarrollo2-catalogos.online";
-// Cambiá a true si querés volver al modo "recargar toda la app" después del login
 const HARD_RELOAD_AFTER_LOGIN = false;
+
+/* ========== Helpers ========== */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseJwt(token) {
+  try {
+    const [, payload] = token.split(".");
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
+function extractAuthFromToken(token) {
+  const data = parseJwt(token) || {};
+  // rol
+  const roleRaw = data.role ?? data.rol ?? data.r ?? "";
+  const role = String(roleRaw || "").toLowerCase().trim();
+
+  // email (si sub es email, usarlo; si no, usar email/correo/mail)
+  const sub = data.sub != null ? String(data.sub) : "";
+  const emailFromSub = EMAIL_RE.test(sub) ? sub : null;
+  const email =
+    emailFromSub ||
+    data.email ||
+    data.correo ||
+    data.mail ||
+    null;
+
+  // id: preferimos id/user_id/admin_id; si no, sub cuando no es email
+  const rawId = data.id ?? data.user_id ?? data.admin_id ?? (emailFromSub ? null : sub) ?? null;
+  const id =
+    rawId && (UUID_RE.test(String(rawId)) || /^\d+$/.test(String(rawId)))
+      ? String(rawId)
+      : null;
+
+  // nombre visible (si lo trae el token)
+  const name =
+    data.name ||
+    data.nombre ||
+    data.first_name ||
+    data.given_name ||
+    null;
+
+  return { role, email, id, name };
+}
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ usuario: "", contrasena: "" });
@@ -29,102 +76,111 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        email: formData.usuario,
-        password: formData.contrasena,
-      }),
-    });
-
-    if (!res.ok) throw new Error("Credenciales inválidas");
-
-    const data = await res.json();
-    const token = data?.access_token || data?.token;
-    if (!token) throw new Error("No se recibió token");
-
-    // 1) Guardar token
-    localStorage.setItem("token", token);
-
-    // 2) Decodificar JWT: sub y role
-    const [, payload] = token.split(".");
-    const jsonPayload = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-    );
-
-const roleRaw = jsonPayload?.role ?? jsonPayload?.rol ?? jsonPayload?.r ?? "";
-const role = String(roleRaw).toLowerCase().trim();
-localStorage.setItem("role", role);
-
-// Guardá prestador_id SOLO si NO es admin y el sub es numérico
-const sub = String(jsonPayload?.sub ?? "");
-const maybeId = sub.includes(":") ? sub.split(":")[0] : sub;
-const isNumericId = /^\d+$/.test(maybeId);
-if (role !== "admin" && isNumericId) {
-  localStorage.setItem("prestador_id", maybeId);
-} else {
-  localStorage.removeItem("prestador_id"); // limpia restos si venías de otra sesión
-}
-
-    
-
-    // 3) (Opcional) traer nombre visible (solo si hay prestadorId)
-// 3) Nombre visible
-if (role === "admin") {
-  // Mock para admin (o podés usar jsonPayload.sub si preferís)
-  localStorage.setItem("userName", "Admin");
-} else {
-  // Si es prestador y guardamos su id, traemos el nombre
-  const storedPrestadorId = localStorage.getItem("prestador_id");
-  if (storedPrestadorId) {
+    e.preventDefault();
     try {
-      const prestadorRes = await fetch(`${BASE_URL}/prestadores/${storedPrestadorId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      // 0) Login
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.usuario,
+          password: formData.contrasena,
+        }),
       });
-      if (prestadorRes.ok) {
-        const prestador = await prestadorRes.json();
-        localStorage.setItem("userName", prestador?.nombre || "Usuario");
+
+      if (!res.ok) throw new Error("Credenciales inválidas");
+
+      const data = await res.json();
+      const token = data?.access_token || data?.token;
+      if (!token) throw new Error("No se recibió token");
+
+      // 1) Guardar token
+      localStorage.setItem("token", token);
+
+      // 2) Extraer identidad desde el token y normalizar almacenamiento
+      const { role, id, name } = extractAuthFromToken(token);
+      localStorage.setItem("role", role);
+      
+      // Limpiar llaves que generan confusión
+      localStorage.removeItem("id_admin");
+      localStorage.removeItem("admin_id");
+
+      if (role === "admin") {
+        // Admin: nunca usar prestador_id
+        localStorage.removeItem("prestador_id");
+
+        // Guardamos id SOLO si vino un id válido en el token
+        if (id) {
+          localStorage.setItem("id", id);
+        } else {
+          // si no hay id, dejamos que la pantalla de perfil lo resuelva por email
+          localStorage.removeItem("id");
+        }
+
+        // Nombre visible
+        localStorage.setItem("userName", name || "Admin");
+      } else {
+        // Prestador (u otros roles no admin)
+        // No guardes 'id' de admin; en su lugar, si sub/id es numérico/uuid y sirve para prestador, podés guardarlo como prestador_id
+        if (id) {
+          localStorage.setItem("prestador_id", id);
+        } else {
+          localStorage.removeItem("prestador_id");
+        }
+        localStorage.removeItem("id"); // por si venías de una sesión admin
+
+        // Intentar traer nombre del prestador
+        if (id) {
+          try {
+            const prestadorRes = await fetch(`${BASE_URL}/prestadores/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (prestadorRes.ok) {
+              const prestador = await prestadorRes.json();
+              localStorage.setItem("userName", prestador?.nombre || name || "Usuario");
+            } else {
+              localStorage.setItem("userName", name || "Usuario");
+            }
+          } catch {
+            localStorage.setItem("userName", name || "Usuario");
+          }
+        } else {
+          localStorage.setItem("userName", name || "Usuario");
+        }
       }
-    } catch {
-      /* ignore */
-    }
-  }
-}
 
-    setIsRefreshing(true);
+      // 3) Señalizar cambio de auth y navegar
+      setIsRefreshing(true);
 
-    if (HARD_RELOAD_AFTER_LOGIN) {
+      if (HARD_RELOAD_AFTER_LOGIN) {
+        const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
+        const intended = location.state?.from?.pathname;
+        localStorage.setItem("postLoginPath", intended || defaultHome);
+        window.location.reload();
+        return;
+      }
+
+      try {
+        window.dispatchEvent(new Event("auth-changed"));
+      } catch {}
+
       const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
       const intended = location.state?.from?.pathname;
-      localStorage.setItem("postLoginPath", intended || defaultHome);
-      window.location.reload();
-      return;
+      const nextPath = intended || defaultHome;
+
+      localStorage.setItem("postLoginPath", nextPath);
+      navigate(nextPath, { replace: true });
+
+      setTimeout(() => setIsRefreshing(false), 300);
+    } catch (err) {
+      setModalMsg(err.message || "Error al iniciar sesión");
+      setModalOpen(true);
     }
+  };
 
-    try { window.dispatchEvent(new Event("auth-changed")); } catch {}
-
-    const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
-    const intended = location.state?.from?.pathname;
-    const nextPath = intended || defaultHome;
-
-    localStorage.setItem("postLoginPath", nextPath);
-    navigate(nextPath, { replace: true });
-
-    setTimeout(() => setIsRefreshing(false), 300);
-
-  } catch (err) {
-    setModalMsg(err.message || "Error al iniciar sesión");
-    setModalOpen(true);
-  }
-};
-
-  // Mientras el login “sella” sesión o estamos haciendo transición, bloqueá la pantalla
   if (isRefreshing) {
     return (
       <Center style={{ height: "100vh" }}>
