@@ -1,76 +1,78 @@
-/* Estilo para el contenedor principal de la App, que ahora centrará el contenido */
+/* --- Tema con variables (opcional pero limpio) --- */
+:root[data-mantine-color-scheme='light'] {
+  --app-bg: #ccc2b8;      /* antes: background-color de .App */
+  --card-bg: #ffffff;
+  --text: #1f1f1f;
+  --input-bg: #f9f9f9;
+  --input-border: #ddd;
+  --primary-500: #8d6e63;
+  --primary-600: #795548;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --app-bg: #242424;      /* gris/marrón oscuro cálido */
+  --card-bg: #2e2623;
+  --text: #f0e6dc;
+  --input-bg: #2d2d2d;
+  --input-border: #555;
+  --primary-500: #a1887f; /* tono cálido para foco */
+  --primary-600: #8d6e63;
+}
+
+/* --- Estilos usando las variables --- */
 .App {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #ccc2b8; /* Color de fondo de la página */
+  background-color: var(--app-bg);
   font-family: sans-serif;
 }
 
-/* Contenedor principal del formulario */
 .form-container {
-  max-width: 800px; /* Aumentado de 600px a 800px */
+  max-width: 800px;
   margin: 40px auto;
   padding: 20px;
-  background-color: #ffffff;
+  background-color: var(--card-bg);
+  color: var(--text);
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  /* opcional en dark: un borde leve */
+  border: 1px solid var(--input-border);
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr; /* Cambiado de repeat(2, 1fr) a 1fr */
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
-/* Contenedor del logo y título */
-.logo-container {
-  margin-bottom: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+.logo-container { margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
+.logo-container h2 { font-size: 28px; color: var(--primary-600); margin: 10px 0 5px 0; }
+.logo-container p { font-size: 16px; color: var(--primary-500); margin: 0; }
 
-.logo-container h2 {
-  font-size: 28px;
-  color: #5d4037;
-  margin: 10px 0 5px 0;
-}
-
-.logo-container p {
-  font-size: 16px;
-  color: #795548;
-  margin: 0;
-}
-
-/* Estilos para los campos de entrada */
+/* Inputs */
 .form-container input {
   width: 100%;
   padding: 15px;
   margin-bottom: 15px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--input-border);
   border-radius: 10px;
-  background-color: #f9f9f9;
+  background-color: var(--input-bg);
   box-sizing: border-box;
   font-size: 16px;
+  color: var(--text);
 }
 
 .form-container input:focus {
   outline: none;
-  border-color: #5d4037;
-  background-color: #fff;
+  border-color: var(--primary-500);
+  background-color: var(--card-bg);
 }
 
-/* Contenedor para los botones */
-.btn-container {
-  margin-top: 20px;
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-}
+/* Botones */
+.btn-container { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
 
-/* Estilo base de los botones */
 .btn {
   padding: 15px 25px;
   border: none;
@@ -84,23 +86,21 @@
   text-align: center;
 }
 
-/* Estilo del botón principal */
-.btn-primary {
-  background-color: #8d6e63;
-  color: white;
-}
+/* Principal */
+.btn-primary { background-color: var(--primary-500); color: white; }
+.btn-primary:hover { background-color: var(--primary-600); }
 
-.btn-primary:hover {
-  background-color: #795548;
-}
-
-/* Estilo del botón secundario */
+/* Secundario */
 .btn-secondary {
   background-color: #fff;
-  color: #8d6e63;
-  border: 1px solid #8d6e63;
+  color: var(--primary-600);
+  border: 1px solid var(--primary-600);
 }
+:root[data-mantine-color-scheme='dark'] .btn-secondary {
+  background-color: var(--card-bg);
+  color: var(--text);
+  border-color: var(--input-border);
+}
+.btn-secondary:hover { background-color: #f5f5f5; }
+:root[data-mantine-color-scheme='dark'] .btn-secondary:hover { background-color: #332a27; }
 
-.btn-secondary:hover {
-  background-color: #f5f5f5;
-}

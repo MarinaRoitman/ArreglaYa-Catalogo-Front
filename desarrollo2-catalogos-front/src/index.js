@@ -2,6 +2,7 @@ import React from 'react';
 // import ReactDOM from 'react-dom/client';
 import { createRoot } from "react-dom/client";
 import { MantineProvider, ColorSchemeScript } from "@mantine/core";
+
 import "@mantine/core/styles.css";
 import './index.css';
 import App from './App';
@@ -11,10 +12,19 @@ import reportWebVitals from './reportWebVitals';
 const root = createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <ColorSchemeScript defaultColorScheme="light" />
-    <MantineProvider defaultColorScheme="light">
+    <ColorSchemeScript defaultColorScheme="auto" />
+    <MantineProvider
+      defaultColorScheme="light"
+      theme={{
+        // opcional: personalizá paleta global
+        primaryColor: "orange",
+      }}
+      withGlobalStyles
+      withNormalizeCSS
+    >
       <App />
     </MantineProvider>
+    
   </React.StrictMode>
 );
 

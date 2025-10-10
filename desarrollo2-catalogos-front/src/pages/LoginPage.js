@@ -24,82 +24,105 @@ export default function LoginPage() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const from = location.state?.from?.pathname || "/solicitudes";
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        email: formData.usuario,
+        password: formData.contrasena,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Credenciales inválidas");
+
+    const data = await res.json();
+    const token = data?.access_token || data?.token;
+    if (!token) throw new Error("No se recibió token");
+
+    // 1) Guardar token
+    localStorage.setItem("token", token);
+
+    // 2) Decodificar JWT: sub y role
+    const [, payload] = token.split(".");
+    const jsonPayload = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+    );
+
+const roleRaw = jsonPayload?.role ?? jsonPayload?.rol ?? jsonPayload?.r ?? "";
+const role = String(roleRaw).toLowerCase().trim();
+localStorage.setItem("role", role);
+
+// Guardá prestador_id SOLO si NO es admin y el sub es numérico
+const sub = String(jsonPayload?.sub ?? "");
+const maybeId = sub.includes(":") ? sub.split(":")[0] : sub;
+const isNumericId = /^\d+$/.test(maybeId);
+if (role !== "admin" && isNumericId) {
+  localStorage.setItem("prestador_id", maybeId);
+} else {
+  localStorage.removeItem("prestador_id"); // limpia restos si venías de otra sesión
+}
+
+    
+
+    // 3) (Opcional) traer nombre visible (solo si hay prestadorId)
+// 3) Nombre visible
+if (role === "admin") {
+  // Mock para admin (o podés usar jsonPayload.sub si preferís)
+  localStorage.setItem("userName", "Admin");
+} else {
+  // Si es prestador y guardamos su id, traemos el nombre
+  const storedPrestadorId = localStorage.getItem("prestador_id");
+  if (storedPrestadorId) {
     try {
-      const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.usuario,
-          password: formData.contrasena,
-        }),
+      const prestadorRes = await fetch(`${BASE_URL}/prestadores/${storedPrestadorId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) throw new Error("Credenciales inválidas");
-
-      const data = await res.json();
-      const token = data?.access_token || data?.token;
-      if (!token) throw new Error("No se recibió token");
-
-      // 1) Guardar token
-      localStorage.setItem("token", token);
-
-      // 2) Decodificar JWT y sanear sub (ej: "12:1" → "12")
-      const [, payload] = token.split(".");
-      const jsonPayload = JSON.parse(
-        atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-      );
-      const prestadorId = String(jsonPayload?.sub ?? "").split(":")[0];
-      localStorage.setItem("prestador_id", prestadorId);
-
-      // 3) (Opcional) traer el nombre visible
-      try {
-        const prestadorRes = await fetch(`${BASE_URL}/prestadores/${prestadorId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (prestadorRes.ok) {
-          const prestador = await prestadorRes.json();
-          localStorage.setItem("userName", prestador?.nombre || "Usuario");
-        }
-      } catch {
-        /* ignore */
+      if (prestadorRes.ok) {
+        const prestador = await prestadorRes.json();
+        localStorage.setItem("userName", prestador?.nombre || "Usuario");
       }
-
-      setIsRefreshing(true);
-
-      if (HARD_RELOAD_AFTER_LOGIN) {
-        // 👉 Modo “recarga total” (bloquea la UI y no muestra nada hasta rehidratar)
-        localStorage.setItem("postLoginPath", from);
-        window.location.reload();
-        return; // no sigue
-      }
-
-      // 👉 Modo sin recarga: avisá al resto de la app y navegá
-      // Emite un evento global por si App.js quiere re-fetch cuando cambie el user
-      try { window.dispatchEvent(new Event("auth-changed")); } catch {}
-
-      // Guardá adónde querías ir por si lo necesitás en App
-      localStorage.setItem("postLoginPath", from);
-
-      // Navegá a destino (replace para no dejar /login en el history)
-      navigate(from, { replace: true });
-      // dejamos el loader un pelito para que la página siguiente pueda montar tranquilo
-      setTimeout(() => setIsRefreshing(false), 300);
-
-    } catch (err) {
-      setModalMsg(err.message || "Error al iniciar sesión");
-      setModalOpen(true);
+    } catch {
+      /* ignore */
     }
-  };
+  }
+}
+
+    setIsRefreshing(true);
+
+    if (HARD_RELOAD_AFTER_LOGIN) {
+      const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
+      const intended = location.state?.from?.pathname;
+      localStorage.setItem("postLoginPath", intended || defaultHome);
+      window.location.reload();
+      return;
+    }
+
+    try { window.dispatchEvent(new Event("auth-changed")); } catch {}
+
+    const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
+    const intended = location.state?.from?.pathname;
+    const nextPath = intended || defaultHome;
+
+    localStorage.setItem("postLoginPath", nextPath);
+    navigate(nextPath, { replace: true });
+
+    setTimeout(() => setIsRefreshing(false), 300);
+
+  } catch (err) {
+    setModalMsg(err.message || "Error al iniciar sesión");
+    setModalOpen(true);
+  }
+};
 
   // Mientras el login “sella” sesión o estamos haciendo transición, bloqueá la pantalla
   if (isRefreshing) {

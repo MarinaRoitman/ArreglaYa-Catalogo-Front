@@ -1,42 +1,43 @@
-// src/__test__/Header.test.js
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom"; // por si en el futuro el header usa navegación
-import { MantineProvider } from "@mantine/core";
 import Header from "../components/Header";
 
-describe("Header (UI e interacciones básicas)", () => {
-  const Wrapper = ({ children }) => (
-    <MantineProvider>
-      <MemoryRouter>{children}</MemoryRouter>
-    </MantineProvider>
-  );
+/* 🎭 Mock completo de Mantine */
+jest.mock("@mantine/core", () => ({
+  Group: ({ children }) => <div>{children}</div>,
+  Burger: ({ onClick }) => (
+    <button onClick={onClick} aria-label="burger-button">Burger</button>
+  ),
+  Image: ({ src, alt }) => <img src={src} alt={alt} />,
+  ActionIcon: ({ onClick, children }) => (
+    <button onClick={onClick} aria-label="Cambiar modo de color">
+      {children}
+    </button>
+  ),
+  useMantineColorScheme: () => ({
+    setColorScheme: jest.fn(),
+  }),
+  useComputedColorScheme: () => "light",
+}));
 
-  it("renderiza Burger y la imagen principal", () => {
-    const toggleMock = jest.fn();
-
-    render(<Header opened={false} toggle={toggleMock} />, { wrapper: Wrapper });
-
-    // Imagen con alt
+describe("Header component", () => {
+  test("renderiza el logo correcto con tema claro", () => {
+    render(<Header opened={false} toggle={jest.fn()} />);
     const logo = screen.getByAltText(/Arregla Ya/i);
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute("src", "/ArreglaYaIcon.jpeg");
+  });
 
-    // Burger button
-    const burger = screen.getByRole("button");
-    expect(burger).toBeInTheDocument();
-
-    // Click en burger llama a toggle
-    fireEvent.click(burger);
+  test("llama a toggle al hacer clic en el Burger", () => {
+    const toggleMock = jest.fn();
+    render(<Header opened={false} toggle={toggleMock} />);
+    fireEvent.click(screen.getByLabelText("burger-button"));
     expect(toggleMock).toHaveBeenCalledTimes(1);
   });
 
-  it("muestra Burger en estado 'opened' cuando la prop es true", () => {
-    const toggleMock = jest.fn();
-    render(<Header opened={true} toggle={toggleMock} />, { wrapper: Wrapper });
-
-    // El botón sigue presente
-    const burger = screen.getByRole("button");
-    expect(burger).toBeInTheDocument();
+  test("muestra el botón para cambiar el tema", () => {
+    render(<Header opened={false} toggle={jest.fn()} />);
+    const themeButton = screen.getByLabelText(/Cambiar modo de color/i);
+    expect(themeButton).toBeInTheDocument();
   });
 });

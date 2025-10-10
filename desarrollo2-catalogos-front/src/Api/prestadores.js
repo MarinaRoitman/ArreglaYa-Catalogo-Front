@@ -47,6 +47,22 @@ export async function updatePrestador(id, data) {
   return res.json();
 }
 
+// Eliminar prestador por ID
+export async function deletePrestador(id) {
+  const res = await fetch(`${API_URL}prestadores/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Error deletePrestador:", errorText);
+    throw new Error(errorText || "Error al eliminar prestador");
+  }
+
+  return res.text(); // El backend suele devolver texto vacío o mensaje
+}
+
 // Asociar zona a prestador
 export async function addZonaToPrestador(id, id_zona) {
 const res = await fetch(`${API_URL}prestadores/${id}/zonas`, {

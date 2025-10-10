@@ -1,11 +1,12 @@
 import React from "react";
-import { AppShell, Box } from "@mantine/core";
+import { AppShell, Box, useComputedColorScheme } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import HeaderBar from "./Header";
 import Sidebar from "./Sidebar";
 
 export default function LayoutTrabajosPendientes({ children }) {
 const [opened, { toggle }] = useDisclosure();
+const scheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
 
 return (
 <AppShell
@@ -18,7 +19,12 @@ return (
     zIndex: 400,
     }}
     padding="lg"
-    styles={{ main: { background: "#CCC1B6" } }}
+    styles={(theme) => ({
+    // Fondo del área principal
+    main: {
+        background: scheme === "dark" ? theme.colors.dark[7] : "#CCC1B6",
+    },
+    })}
 >
     <AppShell.Header style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
     <HeaderBar opened={opened} toggle={toggle} />
@@ -28,7 +34,8 @@ return (
     <Box
         pos="fixed"
         inset={0}
-        bg="rgba(0,0,0,.35)"
+        // leve ajuste del overlay para dark
+        bg={scheme === "dark" ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.35)"}
         style={{ zIndex: 350 }}
         onClick={toggle}
     />

@@ -12,6 +12,11 @@ import Habilidades from './pages/Habilidades';
 import Perfil from './pages/Perfil';
 import Calificaciones from './pages/Calificaciones';
 import PrivateRoute from './PrivateRoutes';
+import MostrarPrestadores from "./pages/MostrarPrestadores";
+import AdminServicos from "./pages/AdminServicios";
+import AdminHabilidades from './pages/AdminHabilidades';
+import PerfilAdmin from './pages/PerfilAdmin';
+
 
 // Servicios API
 import { getPedidos, updatePedido, deletePedido } from './Api/pedidosServicio';
@@ -167,66 +172,124 @@ function App() {
     );
   }
 
+  function RequireRole({ role, children }) {
+  const token = localStorage.getItem("token");
+  const userRole = (localStorage.getItem("role") || "").toLowerCase().trim();
+
+  // si no hay token, redirige a login (por si PrivateRoute no se ejecuta primero)
+  if (!token) return <Navigate to="/login" replace />;
+
+  // si la ruta exige un rol concreto y no coincide, mandamos al home por rol
+  if (role && userRole !== role) {
+    const fallback = userRole === "admin" ? "/admin/prestadores" : "/solicitudes";
+    return <Navigate to={fallback} replace />;
+  }
+
+  return children;
+}
+
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/registro" element={<RegisterPage />} />
+  <div className="App">
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/registro" element={<RegisterPage />} />
 
-          <Route
-            path="/solicitudes"
-            element={
-              <PrivateRoute>
-                <Solicitudes
-                  data={solicitudesData}
-                  aprobar={profesionalEnviaPresupuesto}
-                  rechazar={rechazarSolicitud}
-                />
-              </PrivateRoute>
-            }
-          />
-<Route path="/confirmados"
- element={<PrivateRoute><Confirmados 
- data={confirmadosData} 
- rechazar={rechazarSolicitud} 
-/></PrivateRoute>}/>
-          <Route
-            path="/realizados"
-            element={
-              <PrivateRoute>
-                <Realizados data={realizadosData} />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/habilidades"
-            element={
-              <PrivateRoute>
-                <Habilidades />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/perfil"
-            element={
-              <PrivateRoute>
-                <Perfil />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/calificaciones"
-            element={
-              <PrivateRoute>
-                <Calificaciones />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </div>
-    </Router>
+      {/* ----- RUTA ADMIN ----- */}
+      <Route
+      path="/admin/prestadores"
+      element={
+      <RequireRole role="admin">
+        <MostrarPrestadores />
+      </RequireRole>
+      }
+      />
+      <Route
+        path="/admin/servicios"
+        element={
+          <RequireRole role="admin">
+            <AdminServicos />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/admin/habilidades"
+        element={
+          <RequireRole role="admin">
+            <AdminHabilidades />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/admin/perfil"
+        element={
+          <RequireRole role="admin">
+            <PerfilAdmin/>
+          </RequireRole>
+        }
+      />
+
+
+      {/* ----- RUTAS PRESTADOR ----- */}
+      <Route
+        path="/solicitudes"
+        element={
+          <PrivateRoute>
+            <Solicitudes
+              data={solicitudesData}
+              aprobar={profesionalEnviaPresupuesto}
+              rechazar={rechazarSolicitud}
+            />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/confirmados"
+        element={
+          <PrivateRoute>
+            <Confirmados
+              data={confirmadosData}
+              rechazar={rechazarSolicitud}
+            />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/realizados"
+        element={
+          <PrivateRoute>
+            <Realizados data={realizadosData} />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/habilidades"
+        element={
+          <PrivateRoute>
+            <Habilidades />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <PrivateRoute>
+            <Perfil />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/calificaciones"
+        element={
+          <PrivateRoute>
+            <Calificaciones />
+          </PrivateRoute>
+        }
+      />
+    </Routes>
+  </div>
+</Router>
   );
 }
 
