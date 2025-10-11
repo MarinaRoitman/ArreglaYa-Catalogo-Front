@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Box, Text } from "@mantine/core";
+import { Text, Paper } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
@@ -36,7 +36,11 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
 
   return (
     <AppLayout>
-      <Box p="lg" bg="white" style={{ borderRadius: 16, boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)" }}>
+      <Paper
+      p="lg"
+      withBorder radius="lg" shadow="sm"
+      style={{background: "--app-bg"}}
+      >
         <Text fw={700} fz="xl" mb="md" ta="center">Solicitudes</Text>
         <Filterbar {...{ fNombre, setFNombre, fTel, setFTel, fDir, setFDir, fFecha, setFFecha, fServ, setFServ, fHab, setFHab }} />
         {filteredData.length === 0 ? (
@@ -46,7 +50,7 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
         ) : (
           <TableComponent rows={filteredData} aprobar={aprobar} rechazar={askDelete} type="solicitudes" />
         )}
-      </Box>
+      </Paper>
       <ConfirmDelete opened={confirmOpen} onCancel={cancelDelete} onConfirm={confirmDelete} loading={deleting} />
     </AppLayout>
   );

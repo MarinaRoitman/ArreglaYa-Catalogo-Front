@@ -16,6 +16,7 @@ import MostrarPrestadores from "./pages/MostrarPrestadores";
 import AdminServicos from "./pages/AdminServicios";
 import AdminHabilidades from './pages/AdminHabilidades';
 import PerfilAdmin from './pages/PerfilAdmin';
+import AdminPrestadorVinculos from './pages/AdminPrestadorVinculos';
 
 
 // Servicios API
@@ -229,7 +230,14 @@ function App() {
           </RequireRole>
         }
       />
-
+      <Route
+        path="/admin/vinculos"
+        element={
+          <RequireRole role="admin">
+            <AdminPrestadorVinculos/>
+          </RequireRole>
+        }
+      />
 
       {/* ----- RUTAS PRESTADOR ----- */}
       <Route

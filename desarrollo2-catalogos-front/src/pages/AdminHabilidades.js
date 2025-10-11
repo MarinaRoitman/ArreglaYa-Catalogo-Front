@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 Paper, Group, Text, Table, ActionIcon, Button, Loader, Tooltip,
-Divider, TextInput, Select, ScrollArea, Center, Alert,
+Divider, TextInput, ScrollArea, Center, Alert,
 } from "@mantine/core";
 import { IconPencil, IconTrash, IconRefresh, IconPlus, IconSearch, IconAlertCircle } from "@tabler/icons-react";
 import AppLayout from "../components/LayoutTrabajosPendientes";
@@ -19,7 +19,7 @@ const [err, setErr] = useState("");
 
 // filtros
 const [q, setQ] = useState("");
-const [rubroFilter, setRubroFilter] = useState("");
+const [rubroFilter] = useState("");
 
 // modal
 const [open, setOpen] = useState(false);
@@ -144,15 +144,7 @@ return (
             onChange={(e) => setQ(e.target.value)}
             w={220}
         />
-        <Select
-            placeholder="Filtrar por rubro"
-            data={rubrosOpts}
-            value={rubroFilter}
-            onChange={(v) => setRubroFilter(v || "")}
-            searchable
-            clearable
-            w={220}
-        />
+
         <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={fetchAll}>
             Recargar
         </Button>

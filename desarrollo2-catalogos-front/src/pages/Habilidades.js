@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Box, Text, Group, Button, Pagination, useMantineTheme } from "@mantine/core";
+import { Paper, Text, Group, Button, Pagination, useMantineTheme } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import AppLayout from "../components/LayoutTrabajosPendientes";
@@ -139,21 +139,21 @@ const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
 
 return (
 <AppLayout>
-    <Box
+    <Paper
     p="lg"
-    bg="white"
     maw={{ base: "100%", lg: 1100, xl: 1200 }}
     mx="auto"
+    radius="lg" shadow="sm"
     style={{
-        borderRadius: 16,
-        boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
+        background:"--app-bg",
+        border: "1px solid var(--input-border)",
     }}
     >
     <Text fw={700} fz="xl" mb="md" ta="center">
         Mis Habilidades
     </Text>
 
-    <Group justify={isMobile ? "stretch" : "flex-start"} mb="sm">
+    <Group justify={isMobile ? "stretch" : "flex-end"} mb="sm">
         <Button
         fullWidth={isMobile}
         color="#93755E"
@@ -202,7 +202,7 @@ return (
         size={isMobile ? "md" : "sm"}
         />
     </Group>
-    </Box>
+    </Paper>
 
     <ModalHabilidad
     opened={openNuevo}

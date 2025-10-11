@@ -9,6 +9,8 @@ import {
   IconRosetteDiscountCheckFilled,
   IconCreditCard,
   IconStar,
+  IconTools,
+  IconTool
 } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
@@ -76,7 +78,7 @@ export default function Sidebar() {
               />
               <NavLink
                 label="Servicios"
-                leftSection={<IconBolt size={18} />}
+                leftSection={<IconTool size={18} />}
                 mt="xs"
                 onClick={() => navigate("/admin/servicios")}
                 active={pathname.startsWith("/admin/servicios")}
@@ -88,6 +90,14 @@ export default function Sidebar() {
                 mt="xs"
                 onClick={() => navigate("/admin/habilidades")}
                 active={pathname.startsWith("/admin/habilidades")}
+                color="#b67747ff"
+              />
+              <NavLink
+                label="Vínculos Prestadores"
+                leftSection={<IconTools size={18} />}
+                mt="xs"
+                onClick={() => navigate("/admin/vinculos")}
+                active={pathname.startsWith("/admin/vinculos")}
                 color="#b67747ff"
               />
             </>

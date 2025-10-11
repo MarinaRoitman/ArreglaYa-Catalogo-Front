@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+Paper,
 Box,
 Text,
 Group,
@@ -10,7 +11,7 @@ Alert,
 Divider,
 TextInput,
 } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks"; 
+import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 
 import { listCalificaciones } from "../Api/calificacion";
@@ -63,6 +64,13 @@ const load = async () => {
 load();
 }, []);
 
+// Helper para normalizar rating en rango 0..5
+const normRating = (v) => {
+const n = Number(v);
+if (Number.isNaN(n)) return 0;
+return Math.max(0, Math.min(5, n));
+};
+
 // promedio estrellas
 const promedio = useMemo(() => {
 if (!reviews.length) return 0;
@@ -86,9 +94,8 @@ return reviews.filter((r) => {
 
 return (
 <AppLayout>
-    <Box
+    <Paper
     p="lg"
-    bg="white"
     style={{
         position: "relative",
         borderRadius: 16,
@@ -99,6 +106,8 @@ return (
         margin: "0 auto",
         minHeight: "80vh",
         overflowX: "auto",
+        background: "--app-bg",
+        border: "1px solid var(--input-border)",
     }}
     >
     <LoadingOverlay visible={loading} zIndex={1000} />
@@ -113,8 +122,9 @@ return (
         </Alert>
     )}
 
+    {/*Promedio con fracciones */}
     <Group justify="center" mb="xs">
-        <Rating value={promedio} readOnly />
+        <Rating value={normRating(promedio)} readOnly fractions={10} />
     </Group>
     <Text ta="center" mb="md">
         {reviews.length
@@ -144,7 +154,7 @@ return (
             key={r.id}
             mb="md"
             pb="md"
-            style={{ borderBottom: "1px solid #eee" }}
+            style={{ borderBottom: "1px solid var(--input-border)" }}
             >
             <Group gap="sm" wrap="nowrap">
                 <Avatar radius="xl" color="#93755E">
@@ -162,12 +172,16 @@ return (
                     >
                     {r.nombre_usuario || "Usuario"}
                     </Text>
+
+                    {/* Estrellas por reseña con fracciones */}
                     <Rating
-                    value={Number(r.estrellas) || 0}
+                    value={normRating(r.estrellas)}
                     readOnly
                     size="sm"
+                    fractions={10}
                     />
                 </Group>
+
                 <Text fz="sm" c="dimmed" mt={4}>
                     {r.descripcion?.trim() || "Sin comentario"}
                 </Text>
@@ -177,7 +191,7 @@ return (
         ))
         )}
     </Box>
-    </Box>
+    </Paper>
 </AppLayout>
 );
 }

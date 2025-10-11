@@ -94,12 +94,7 @@ return (
         </Text>
         </div>
         <Group>
-            <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => { setCurrent(null); setEditOpen(true); }}
-            >
-            Nuevo rubro
-            </Button>
+            
         <TextInput
             leftSection={<IconSearch size={16} />}
             placeholder="Buscar por nombre…"
@@ -107,9 +102,19 @@ return (
             onChange={(e) => setQuery(e.target.value)}
             w={240}
         />
+
         <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={fetchAll}>
             Recargar
         </Button>
+
+            <Button
+            color="#93755E"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => { setCurrent(null); setEditOpen(true); }}
+            >
+            Nuevo
+            </Button>
+
         </Group>
     </Group>
 

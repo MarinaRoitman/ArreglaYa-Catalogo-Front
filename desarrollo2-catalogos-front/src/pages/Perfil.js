@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+Paper,
 Box,
 Text,
 Group,
@@ -345,18 +346,19 @@ const isEmailAvailable = async (email) => {
 
 return (
 <AppLayout>
-    <Box
-    p="lg"
-    bg="white"
-    style={{
-        position: "relative",
-        borderRadius: 16,
-        boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
-        width: "100%",
-        maxWidth: isDesktop ? 1200 : "95%",
-        margin: "0 auto",
-    }}
-    >
+    <Paper
+        p="lg"
+        withBorder
+        radius="lg"
+        shadow="sm"
+        style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: isDesktop ? 1200 : "95%",
+            margin: "0 auto",
+            background: "--app-bg",
+        }}
+        >
     <LoadingOverlay visible={loading || saving} zIndex={1000} />
     <Text fw={700} fz="xl" mb="lg" ta="center">
         Mi Perfil
@@ -371,14 +373,7 @@ return (
     <Grid gutter="xl" align="stretch">
         {/* Columna izquierda: Editar Perfil */}
         <Grid.Col span={{ base: 12, md: 7 }}>
-        <Box
-            p="lg"
-            bg="white"
-            style={{
-            borderRadius: 16,
-            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
-            }}
-        >
+        <Paper p="lg" withBorder radius="lg" shadow="sm" style={{ background: "--app-bg" }}>      
             <Text fw={600} fz="lg" mb="md" ta="center">
             Editar Perfil
             </Text>
@@ -407,21 +402,66 @@ return (
             <TextInput label="DNI" value={form.dni} disabled />
             </Group>
 
-            <Group grow mb="md" style={{ alignItems: "flex-end" }}>
-            <Box style={{ flex: 1 }}>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
-                Zonas
-                </label>
-                <Select
-                isMulti
-                options={zonas}
-                placeholder="Seleccioná zonas"
-                value={zonasSeleccionadas}
-                onChange={(opts) => setZonasSeleccionadas(opts || [])}
-                />
-            </Box>
-            <TextInput label="Dirección" value={form.direccion} onChange={handleChange("direccion")} error={errors.direccion} maxLength={MAX.direccion}/>
-            </Group>
+<Group grow mb="md" align="flex-end">
+    <Box style={{ flex: 1 }}>
+    <label
+        style={{
+        display: "block",
+        fontSize: 14,
+        fontWeight: 500,
+        marginBottom: 6,
+        color: "var(--text)",
+        }}
+    >
+        Zonas
+    </label>
+
+    <Select
+        isMulti
+        options={zonas}
+        placeholder="Seleccioná zonas"
+        value={zonasSeleccionadas}
+        onChange={(opts) => setZonasSeleccionadas(opts || [])}
+
+        styles={{
+        control: (base) => ({
+            ...base,
+            background: "var(--input-bg)",
+            borderColor: "var(--input-border)",
+            boxShadow: "none",
+            ":hover": { borderColor: "var(--input-border)" },
+        }),
+        menu: (base) => ({
+            ...base,
+            background: "var(--card-bg)",
+            border: "1px solid var(--input-border)",
+        }),
+        option: (base, state) => ({
+            ...base,
+            background: state.isFocused ? "var(--input-bg)" : "transparent",
+            color: "var(--text)",
+        }),
+        singleValue: (base) => ({ ...base, color: "var(--text)" }),
+        multiValue: (base) => ({
+            ...base,
+            background: "transparent",
+            border: "1px solid var(--input-border)",
+        }),
+        multiValueLabel: (base) => ({ ...base, color: "var(--text)" }),
+        input: (base) => ({ ...base, color: "var(--text)" }),
+        placeholder: (base) => ({ ...base, color: "var(--text)" }),
+        }}
+    />
+    </Box>
+
+    <TextInput
+    label="Dirección"
+    value={form.direccion}
+    onChange={handleChange("direccion")}
+    error={errors.direccion}
+    maxLength={MAX.direccion}
+    />
+</Group>
 
             <Group grow mb="md">
             <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} error={errors.telefono} maxLength={MAX.telefono}/>
@@ -442,20 +482,12 @@ return (
                 Dar de baja
             </Button>
             </Group>
-        </Box>
+        </Paper>
         </Grid.Col>
 
         {/* Columna derecha: Habilidades con scroll interno */}
         <Grid.Col span={{ base: 12, md: 5 }}>
-        <Box
-            p="lg"
-            bg="white"
-            style={{
-            borderRadius: 16,
-            boxShadow: "0 6px 24px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.04)",
-            height: "100%",
-            }}
-        >
+        <Paper p="lg" withBorder radius="lg" shadow="sm" style={{ background: "--app-bg", height: "100%" }}>
             <Text fw={600} fz="lg" mb="md" ta="center">
             Mis Habilidades
             </Text>
@@ -471,7 +503,7 @@ return (
             <Box
             mih={100}
             style={{
-                border: "1px solid #ddd",
+                border: "1px solid var(--input-border)",
                 borderRadius: 8,
                 padding: 8,
                 maxHeight: 350,        // alto máximo
@@ -484,7 +516,7 @@ return (
                 </Text>
             ) : (
                 habilidadesFiltradas.map((h) => (
-                <Box key={h.id} p="xs" style={{ borderBottom: "1px solid #eee" }}>
+                <Box key={h.id} p="xs" style={{ borderBottom: "1px solid var(--input-border)" }}>
                     <Text fw={500} style={{ fontSize: 14 }}>
                     {h.nombre}
                     </Text>
@@ -495,7 +527,7 @@ return (
                 ))
             )}
             </Box>
-        </Box>
+        </Paper>
         </Grid.Col>
     </Grid>
 
@@ -571,7 +603,7 @@ return (
         </Button>
         </Stack>
     </Modal>
-    </Box>
+    </Paper>
 </AppLayout>
 );
 }
