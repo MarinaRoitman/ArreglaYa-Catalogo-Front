@@ -34,6 +34,8 @@ const [idRubro, setIdRubro] = useState("");
 // campos nueva habilidad
 const [nombre, setNombre] = useState("");
 const [descripcion, setDescripcion] = useState("");
+const [zonas, setZonas] = useState([]);
+const [idZona, setIdZona] = useState("");
 
 useEffect(() => {
 if (!opened) return;
@@ -53,6 +55,16 @@ const fetchData = async () => {
     if (!resRubros.ok) throw new Error("Error al traer rubros");
     const rubrosData = await resRubros.json();
     setRubros(rubrosData.map((r) => ({ value: String(r.id), label: r.nombre })));
+
+    // 🔹 zonas  <-- INICIA BLOQUE AÑADIDO
+    const resZonas = await fetch(`${API_URL}zonas/`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resZonas.ok) throw new Error("Error al traer zonas");
+    const zonasData = await resZonas.json();
+    setZonas(zonasData.map((z) => ({ value: String(z.id), label: z.nombre })));
+
+
     } catch (err) {
     console.error("Error cargando datos:", err.message);
     }
@@ -66,6 +78,8 @@ setHabilidadId("");
 setIdRubro("");
 setNombre("");
 setDescripcion("");
+setIdZona(""); 
+
 }, [opened, habilidadesActuales]);
 
 const handleSubmit = async () => {
@@ -83,6 +97,7 @@ try {
         nombre,
         descripcion,
         id_rubro: parseInt(idRubro, 10),
+        id_zona: parseInt(idZona, 10),
     });
     onSelect?.(nueva);
     }
@@ -144,6 +159,15 @@ return (
             onChange={setIdRubro}
             searchable
             placeholder="Seleccioná un rubro"
+            required
+        />
+        <Select
+            label="Zona"
+            data={zonas}
+            value={idZona}
+            onChange={setIdZona}
+            searchable
+            placeholder="Seleccioná una zona de trabajo"
             required
         />
         </>

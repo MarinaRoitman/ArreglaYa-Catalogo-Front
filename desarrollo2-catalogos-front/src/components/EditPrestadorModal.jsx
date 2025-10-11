@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert } from "@mantine/core";
-
+import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert, Select } from "@mantine/core";
+import { fetchZonas } from "../Api/zonas";
 const MAX = 50;
 
 export default function EditPrestadorModal({
@@ -18,6 +18,7 @@ email: "",
 telefono: "",
 direccion: "",
 dni: "",
+id_zona: "",
 });
 
 const [errors, setErrors] = useState({
@@ -26,12 +27,28 @@ apellido: "",
 email: "",
 telefono: "",
 direccion: "",
+id_zona: "",
 });
-
+const [zonas, setZonas] = useState([]); 
 const [formError, setFormError] = useState("");
 
 useEffect(() => {
-if (opened) {
+  if (opened) {
+    const loadZonas = async () => { // <-- Renombramos la función
+      try {
+        const zonasData = await fetchZonas(); // <-- Ahora sí llama a la función importada
+        const zonasFormatted = zonasData.map(zona => ({
+          value: String(zona.id),
+          label: zona.nombre,
+        }));
+        setZonas(zonasFormatted);
+      } catch (error) {
+        console.error("Error al cargar zonas:", error);
+      }
+    };
+
+    loadZonas(); 
+
     const next = {
     nombre: initialData?.nombre ?? "",
     apellido: initialData?.apellido ?? "",
@@ -39,13 +56,15 @@ if (opened) {
     telefono: initialData?.telefono ?? initialData?.celular ?? "",
     direccion: initialData?.direccion ?? initialData?.domicilio ?? "",
     dni: initialData?.dni ?? initialData?.documento ?? "",
+    id_zona: initialData?.id_zona ?? "", 
+
     };
     // recortamos a MAX por si viniera largo
     Object.keys(next).forEach((k) => {
     if (typeof next[k] === "string") next[k] = next[k].slice(0, MAX);
     });
     setValues(next);
-    setErrors({ nombre: "", apellido: "", email: "", telefono: "", direccion: "" });
+    setErrors({ nombre: "", apellido: "", email: "", telefono: "", direccion: "", id_zona: "" });
     setFormError("");
 }
 }, [opened, initialData]);
@@ -65,7 +84,8 @@ if (key === "email") {
     if (!v) return "El email es obligatorio.";
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "Ingresá un e-mail válido.";
 }
-return "";
+  if (key === "id_zona") return v ? "" : "La zona es obligatoria.";
+  return "";
 };
 
 const validateAll = (data = values) => {
@@ -75,6 +95,7 @@ const nextErrors = {
     email: validateField("email", data.email),
     telefono: validateField("telefono", data.telefono),
     direccion: validateField("direccion", data.direccion),
+    id_zona: validateField("id_zona", data.id_zona),
 };
 const isValid = Object.values(nextErrors).every((e) => !e);
 setErrors(nextErrors);
@@ -98,20 +119,22 @@ if (field in errors) {
 }
 };
 
-const handleSubmit = async () => {
-if (!validateAll()) return;
 
-const payload = {
+const handleSubmit = async () => {
+  if (!validateAll()) return;
+
+  const payload = {
     nombre: values.nombre.trim(),
     apellido: values.apellido.trim(),
     email: values.email.trim(),
     telefono: values.telefono.trim(),
     direccion: values.direccion.trim(),
-    // ❌ DNI NO SE EDITA: no lo mandamos en el payload
+    id_zona: values.id_zona ? parseInt(values.id_zona, 10) : null, 
+  };
+
+  await onSave?.(payload);
 };
 
-await onSave?.(payload);
-};
 
 return (
 <Modal
@@ -131,79 +154,92 @@ return (
         </Alert>
     )}
 
-    <Grid>
-        <Grid.Col span={{ base: 12, sm: 6 }}>
-        <TextInput
-            label="Nombre"
-            withAsterisk
-            value={values.nombre}
-            onChange={handleChange("nombre")}
-            error={errors.nombre}
-            disabled={loading}
-            maxLength={MAX}
-        />
-        </Grid.Col>
+<Grid>
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <TextInput
+      label="Nombre"
+      withAsterisk
+      value={values.nombre}
+      onChange={handleChange("nombre")}
+      error={errors.nombre}
+      disabled={loading}
+      maxLength={MAX}
+    />
+  </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: 6 }}>
-        <TextInput
-            label="Apellido"
-            withAsterisk
-            value={values.apellido}
-            onChange={handleChange("apellido")}
-            error={errors.apellido}
-            disabled={loading}
-            maxLength={MAX}
-        />
-        </Grid.Col>
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <TextInput
+      label="Apellido"
+      withAsterisk
+      value={values.apellido}
+      onChange={handleChange("apellido")}
+      error={errors.apellido}
+      disabled={loading}
+      maxLength={MAX}
+    />
+  </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: 6 }}>
-        <TextInput
-            label="Email"
-            withAsterisk
-            type="email"
-            value={values.email}
-            onChange={handleChange("email")}
-            error={errors.email}
-            disabled={loading}
-            maxLength={MAX}
-        />
-        </Grid.Col>
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <TextInput
+      label="Email"
+      withAsterisk
+      type="email"
+      value={values.email}
+      onChange={handleChange("email")}
+      error={errors.email}
+      disabled={loading}
+      maxLength={MAX}
+    />
+  </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: 6 }}>
-        <TextInput
-            label="Teléfono"
-            withAsterisk
-            value={values.telefono}
-            onChange={handleChange("telefono")}
-            error={errors.telefono}
-            disabled={loading}
-            maxLength={MAX}
-            inputMode="numeric"
-        />
-        </Grid.Col>
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <TextInput
+      label="Teléfono"
+      withAsterisk
+      value={values.telefono}
+      onChange={handleChange("telefono")}
+      error={errors.telefono}
+      disabled={loading}
+      maxLength={MAX}
+      inputMode="numeric"
+    />
+  </Grid.Col>
 
-        <Grid.Col span={12}>
-        <TextInput
-            label="Dirección"
-            withAsterisk
-            value={values.direccion}
-            onChange={handleChange("direccion")}
-            error={errors.direccion}
-            disabled={loading}
-            maxLength={MAX}
-        />
-        </Grid.Col>
+  <Grid.Col span={12}>
+    <TextInput
+      label="Dirección"
+      withAsterisk
+      value={values.direccion}
+      onChange={handleChange("direccion")}
+      error={errors.direccion}
+      disabled={loading}
+      maxLength={MAX}
+    />
+  </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: 6 }}>
-        <TextInput
-            label="DNI"
-            value={values.dni}
-            disabled // 🔒 NO editable
-            maxLength={MAX}
-            // sin onChange
-        />
-        </Grid.Col>
-    </Grid>
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <TextInput
+      label="DNI"
+      value={values.dni}
+      disabled // 🔒 NO editable
+      maxLength={MAX}
+    />
+  </Grid.Col>
+
+  <Grid.Col span={{ base: 12, sm: 6 }}>
+    <Select
+      label="Zona de Trabajo"
+      placeholder="Seleccione una zona"
+      data={zonas}
+      value={String(values.id_zona)} // El valor del Select debe ser un string
+      onChange={(value) => handleChange("id_zona")({ currentTarget: { value } })}
+      withAsterisk
+      error={errors.id_zona}
+      disabled={loading}
+      searchable
+    />
+  </Grid.Col>
+</Grid>
 
     <Group justify="space-between" mt="md">
         <Button variant="outline" onClick={onOpenPassword} disabled={loading}>

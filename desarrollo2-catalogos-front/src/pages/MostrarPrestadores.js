@@ -225,6 +225,7 @@ try {
     telefono: formValues?.telefono?.trim(),
     direccion: formValues?.direccion?.trim(),
     dni: formValues?.dni?.trim(),
+    id_zona: formValues?.id_zona,
     };
     Object.keys(payload).forEach((k) => {
     if (payload[k] === "" || payload[k] == null) delete payload[k];
