@@ -4,7 +4,6 @@ import { Modal, Text, Button, Group, Stack, ThemeIcon } from "@mantine/core";
 import { IconCheck, IconAlertCircle } from "@tabler/icons-react";
 import { API_URL } from "../Api/api";
 import "../../src/Form.css";
-import bcrypt from 'bcryptjs';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -71,8 +70,7 @@ const handleChange = (e) => {
     }
 
     try {
-        const salt = bcrypt.genSaltSync(10); 
-        const hashedPassword = bcrypt.hashSync(formData.password, salt);
+
 
         const response = await fetch(`${API_URL}auth/register`, {
         method: "POST",
@@ -84,7 +82,7 @@ const handleChange = (e) => {
           dni: formData.dni,
           email: formData.email,
           telefono: formData.telefono,
-          password: hashedPassword,
+          password: formData.password,
         }),
       });
 
