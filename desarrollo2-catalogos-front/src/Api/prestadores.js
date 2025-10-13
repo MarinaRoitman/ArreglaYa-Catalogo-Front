@@ -133,3 +133,40 @@ export async function cambiarContrasena(id, nuevaContrasena) {
 
   return res.json();
 }
+
+
+/**
+ * Sube o actualiza la foto de un prestador.
+ * @param {string|number} prestadorId - El ID del prestador.
+ * @param {File} file - El archivo de la imagen a subir.
+ */
+export const uploadPrestadorFoto = async (prestadorId, file) => {
+  const token = localStorage.getItem("token");
+  if (!prestadorId || !file) {
+    throw new Error("Faltan el ID del prestador o el archivo.");
+  }
+
+  // FormData es la forma estándar de enviar archivos.
+  const formData = new FormData();
+  formData.append("foto", file); // "foto" es el nombre que espera el backend.
+
+  try {
+    const response = await fetch(`${API_URL}prestadores/${prestadorId}/foto`, {
+      method: 'PATCH',
+      headers: {
+        // NO se pone 'Content-Type', el navegador lo hace solo con FormData.
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "No se pudo subir la imagen.");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error uploadPrestadorFoto:", error.message);
+    throw error;
+  }
+};

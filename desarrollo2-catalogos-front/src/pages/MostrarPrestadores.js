@@ -13,6 +13,8 @@ getPrestadorById,
 updatePrestador,
 deletePrestador,
 cambiarContrasena,
+  addZonaToPrestador, 
+  removeZonaFromPrestador, 
 } from "../Api/prestadores";
 
 import { listCalificaciones } from "../Api/calificacion";
@@ -207,41 +209,65 @@ try {
 }
 };
 
-// ---------- Guardar edición ----------
+// REEMPLAZA TU handleSaveEdit POR ESTA VERSIÓN FINAL:
 const handleSaveEdit = async (formValues) => {
-const id = selected?.id ?? selected?.ID ?? null;
-if (!id) {
+  const id = selected?.id;
+  if (!id) {
     setErr("No se pudo determinar el ID del prestador a actualizar.");
     return;
-}
-try {
+  }
+
+  try {
     setSaving(true);
     setErr("");
 
-    const payload = {
-    nombre: formValues?.nombre?.trim(),
-    apellido: formValues?.apellido?.trim(),
-    email: formValues?.email?.trim(),
-    telefono: formValues?.telefono?.trim(),
-    direccion: formValues?.direccion?.trim(),
-    dni: formValues?.dni?.trim(),
-    id_zona: formValues?.id_zona,
-    };
-    Object.keys(payload).forEach((k) => {
-    if (payload[k] === "" || payload[k] == null) delete payload[k];
-    });
+    // 1. Separamos las zonas del resto de los datos (igual que en Perfil.js)
+    const { zonas: nuevasZonasIdsStrings, ...datosPrestador } = formValues;
+    const nuevasZonasIds = nuevasZonasIdsStrings.map(id => parseInt(id, 10));
 
-    await updatePrestador(id, payload);
+    // 2. Comprobamos si hay cambios en los datos de texto
+    const hasFormChanges = Object.keys(datosPrestador).some(
+      key => datosPrestador[key].trim() !== (selected[key] || "").trim()
+    );
+
+    // 3. Si hay cambios en los datos de texto, enviamos el PATCH principal
+    if (hasFormChanges) {
+      // Creamos un payload limpio SOLO con los datos de texto, sin el ID en el body
+      const updatePayload = {
+        nombre: datosPrestador.nombre,
+        apellido: datosPrestador.apellido,
+        email: datosPrestador.email,
+        telefono: datosPrestador.telefono,
+        direccion: datosPrestador.direccion,
+      };
+      await updatePrestador(id, updatePayload);
+    }
+
+    // 4. Replicamos la lógica de Perfil.js para actualizar las zonas por separado
+    const originalZonasIds = (selected?.zonas || []).map(z => z.id);
+    const hasZonaChanges = JSON.stringify(nuevasZonasIds.sort()) !== JSON.stringify(originalZonasIds.sort());
+
+    if (hasZonaChanges) {
+      const toAdd = nuevasZonasIds.filter(zonaId => !originalZonasIds.includes(zonaId));
+      const toRemove = originalZonasIds.filter(zonaId => !nuevasZonasIds.includes(zonaId));
+
+      // Usamos Promise.all para hacer las llamadas en paralelo y mejorar la performance
+      await Promise.all([
+        ...toAdd.map(zonaId => addZonaToPrestador(id, zonaId)),
+        ...toRemove.map(zonaId => removeZonaFromPrestador(id, zonaId))
+      ]);
+    }
 
     setEditOpen(false);
     setSelected(null);
-    await fetchRows();
-} catch (e) {
+    await fetchRows(); // Recargamos la tabla para ver los cambios.
+
+  } catch (e) {
     console.error("Error al actualizar prestador:", e);
     setErr(e?.message || "No se pudo actualizar el prestador.");
-} finally {
+  } finally {
     setSaving(false);
-}
+  }
 };
 
 const handleCancelEdit = () => {

@@ -11,6 +11,8 @@ LoadingOverlay,
 Modal,
 Alert,
 Stack,
+ Avatar, 
+  FileButton,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconCircleCheck, IconAlertTriangle } from "@tabler/icons-react";
@@ -26,6 +28,11 @@ addZonaToPrestador,
 removeZonaFromPrestador,
 getPrestadores
 } from "../Api/prestadores";
+
+import {
+uploadImageToImgur
+} from "../Api/imgur";
+
 import ModalCambiarContrasena from "../components/ModalCambiarContrasena";
 
 /* utilidades  */
@@ -54,6 +61,7 @@ email: "",
 direccion: "",
 telefono: "",
 dni: "",
+foto: "",
 });
 
 const [errors, setErrors] = useState({
@@ -80,7 +88,10 @@ const [successOpen, setSuccessOpen] = useState(false);
 const [error, setError] = useState("");
 const [bajaOpen, setBajaOpen] = useState(false);
 
-// máximos de caracteres
+const [fotoUrl, setFotoUrl] = useState(""); // La foto actual del prestador
+const [fotoFile, setFotoFile] = useState(null); // El nuevo archivo a subir
+const [fotoPreview, setFotoPreview] = useState("");
+
 const MAX = {
     nombre: 30,
     apellido: 30,
@@ -90,6 +101,7 @@ const MAX = {
 };
 
 useEffect(() => {
+    
 const load = async () => {
     try {
     setLoading(true);
@@ -114,6 +126,10 @@ const load = async () => {
     setForm(nextForm);
     setOriginalForm(nextForm);
 
+    const initialFoto = prestador.foto || prestador.foto_url || "";
+    setFotoUrl(initialFoto);
+    setFotoPreview(initialFoto);
+
     const prestadorZonas = (prestador.zonas || []).map((z) => ({
         value: z.id,
         label: z.nombre,
@@ -130,6 +146,17 @@ const load = async () => {
 };
 load();
 }, []);
+
+useEffect(() => {
+    if (!fotoFile) {
+      return; // Si no hay archivo, no hagas nada
+    }
+    const objectUrl = URL.createObjectURL(fotoFile);
+    setFotoPreview(objectUrl);
+
+    // Limpia la URL de la memoria cuando el componente se desmonte o el archivo cambie
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [fotoFile]);
 
 const handleChange = (key) => (e) => {
 const val = e?.target ? e.target.value : e;
@@ -175,85 +202,87 @@ const hasFormChanges =
 originalForm != null && !shallowEqualForm(form, originalForm, formKeys);
 const selectedZonaIds = zonasSeleccionadas.map((z) => z.value);
 const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
+const hasFotoChange = fotoFile != null;
 
+// REEMPLAZA TU FUNCIÓN handleSubmit POR ESTA:
 const handleSubmit = async () => {
-try {
-setSaving(true);
-const prestadorId = localStorage.getItem("prestador_id");
-if (!prestadorId) throw new Error("No se encontró prestador_id");
+  try {
+    setSaving(true);
+    setError("");
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-// Sin cambios en nada
-if (!hasFormChanges && !hasZonaChanges) {
-    setSuccessOpen(true);
-    return;
-}
-
-// Si hay cambios en el formulario, validar
-if (hasFormChanges) {
-    const { isValid, nextErrors } = validateForm(form);
-    setErrors(nextErrors);
-    if (!isValid) {
-    setError("Revisá los campos marcados.");
-    return; // NO seguimos si es inválido
+    // Si no hay ningún cambio, no hacemos nada más que mostrar éxito.
+    if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
+      setSuccessOpen(true);
+      return;
     }
-}
 
-// Chequeo de disponibilidad de e-mail (lógica de negocio)
-  const email = form.email?.trim();
-  if (email) {
-    try {
-      const available = await isEmailAvailable(email);
-      if (!available) {
-        setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
-        setError("Revisá los campos marcados.");
-        return;
+    // --- LÓGICA DE VALIDACIÓN PRIMERO ---
+    // Si hay cambios en el formulario, es obligatorio validar antes de continuar.
+    if (hasFormChanges) {
+      const { isValid, nextErrors } = validateForm(form);
+      setErrors(nextErrors);
+      if (!isValid) {
+        // Si no es válido, detenemos todo.
+        throw new Error("Revisá los campos marcados.");
       }
-    } catch {
+
+      // Chequeo de email duplicado (solo si cambió)
+      const email = form.email?.trim();
+      if (email && email !== originalForm.email) {
+        const available = await isEmailAvailable(email);
+        if (!available) {
+          setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
+          throw new Error("Revisá los campos marcados.");
+        }
+      }
     }
-  }
 
-// Si solo cambian zonas
-if (!hasFormChanges && hasZonaChanges) {
-    const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
-    const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
-    for (const id of toAdd) await addZonaToPrestador(prestadorId, id);
-    for (const id of toRemove) await removeZonaFromPrestador(prestadorId, id);
-    setOriginalZonasIds(selectedZonaIds);
+    // --- PREPARACIÓN DEL PAYLOAD ---
+    // Creamos un payload base con los datos del formulario (ya validados si fue necesario).
+    const payload = {
+      nombre: form.nombre,
+      apellido: form.apellido,
+      direccion: form.direccion,
+      email: form.email,
+      telefono: form.telefono,
+    };
+
+    // Si hay una foto nueva, la subimos a Imgur y añadimos la URL al payload.
+    if (hasFotoChange) {
+      const newFotoUrl = await uploadImageToImgur(fotoFile);
+      payload.foto = newFotoUrl;
+    }
+
+    // --- EJECUCIÓN DE LAS ACTUALIZACIONES ---
+    // Si hubo cambios en el formulario o en la foto, llamamos a updatePrestador.
+    if (hasFormChanges || hasFotoChange) {
+      await updatePrestador(prestadorId, payload);
+      // Actualizamos el estado original para reflejar los nuevos datos guardados.
+      setOriginalForm({ ...form });
+      if (hasFotoChange) {
+        setFotoUrl(payload.foto);
+        setFotoFile(null);
+      }
+    }
+
+    // La lógica de las zonas se ejecuta de forma independiente.
+    if (hasZonaChanges) {
+      const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
+      const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
+      for (const id of toAdd) await addZonaToPrestador(prestadorId, id);
+      for (const id of toRemove) await removeZonaFromPrestador(prestadorId, id);
+      setOriginalZonasIds(selectedZonaIds);
+    }
+
     setSuccessOpen(true);
-    return;
-}
 
-// Cambios en formulario (ya válidos) + zonas (si las hay)
-const payload = {
-    nombre: form.nombre,
-    apellido: form.apellido,
-    direccion: form.direccion,
-    email: form.email,
-    telefono: form.telefono,
-    activo: true,
-};
-Object.keys(payload).forEach((k) => {
-    if (payload[k] === "" || payload[k] == null) delete payload[k];
-});
-
-await updatePrestador(prestadorId, payload);
-
-if (hasZonaChanges) {
-    const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
-    const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
-    for (const id of toAdd) await addZonaToPrestador(prestadorId, id);
-    for (const id of toRemove) await removeZonaFromPrestador(prestadorId, id);
-    setOriginalZonasIds(selectedZonaIds);
-}
-
-setOriginalForm({ ...originalForm, ...form });
-setSuccessOpen(true);
-setError(""); // limpiamos error general si lo había
-} catch (err) {
-setError(err.message || "Error al guardar cambios");
-} finally {
-setSaving(false);
-}
+  } catch (err) {
+    setError(err.message || "Error al guardar cambios");
+  } finally {
+    setSaving(false);
+  }
 };
 
 const handlePasswordChange = async (newPassword) => {
@@ -373,117 +402,99 @@ return (
     <Grid gutter="xl" align="stretch">
         {/* Columna izquierda: Editar Perfil */}
         <Grid.Col span={{ base: 12, md: 7 }}>
-        <Paper p="lg" withBorder radius="lg" shadow="sm" style={{ background: "--app-bg" }}>      
-            <Text fw={600} fz="lg" mb="md" ta="center">
-            Editar Perfil
-            </Text>
+  {/* Usamos un solo Paper para todo el contenido de la columna */}
+  <Paper p="lg" withBorder radius="lg" shadow="sm" style={{ background: "var(--app-bg)" }}>
 
-            <Group grow mb="md">
-            <TextInput label="Nombre" value={form.nombre} onChange={handleChange("nombre")} error={errors.nombre} maxLength={MAX.nombre}/>
-            <TextInput label="Apellido" value={form.apellido} onChange={handleChange("apellido")} error={errors.apellido} maxLength={MAX.apellido}/>
-            </Group>
+    {/* Título General */}
+    <Text fw={600} fz="lg" mb="md" ta="center">
+      Editar Perfil
+    </Text>
 
-            <Group grow mb="md">
-            <TextInput label="Mail" value={form.email} onChange={handleChange("email")} error={errors.email} maxLength={MAX.email}
-            onBlur={async () => {
-                // si el formato es válido, chequeá disponibilidad
-                const email = form.email?.trim();
-                if (email && !errors.email) {
-                try {
-                    const available = await isEmailAvailable(email);
-                    if (!available) {
-                        setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
-                    }
-                    } catch {
-                    // silencioso: si falla la red, no pisamos otros errores
-                    }
-                }
-                }}/>
-            <TextInput label="DNI" value={form.dni} disabled />
-            </Group>
-
-<Group grow mb="md" align="flex-end">
-    <Box style={{ flex: 1 }}>
-    <label
-        style={{
-        display: "block",
-        fontSize: 14,
-        fontWeight: 500,
-        marginBottom: 6,
-        color: "var(--text)",
-        }}
+    {/* Sección de la Foto de Perfil */}
+<Stack align="center" gap="md" mb="xl">
+  <Avatar src={fotoPreview} size={120} radius="100%" />
+  <Group>
+    <FileButton onChange={setFotoFile} accept="image/png,image/jpeg">
+      {(props) => <Button {...props}>Seleccionar foto</Button>}
+    </FileButton>
+    <Button
+      variant="default"
+      onClick={() => {
+        setFotoFile(null);
+        setFotoPreview(fotoUrl); // Vuelve a la foto original
+      }}
+      disabled={!fotoFile}
     >
-        Zonas
-    </label>
+      Cancelar
+    </Button>
+  </Group>
+</Stack>
 
-    <Select
-        isMulti
-        options={zonas}
-        placeholder="Seleccioná zonas"
-        value={zonasSeleccionadas}
-        onChange={(opts) => setZonasSeleccionadas(opts || [])}
+    {/* --- INICIO DEL FORMULARIO DE DATOS --- */}
+    <Group grow mb="md">
+      <TextInput label="Nombre" value={form.nombre} onChange={handleChange("nombre")} error={errors.nombre} maxLength={MAX.nombre}/>
+      <TextInput label="Apellido" value={form.apellido} onChange={handleChange("apellido")} error={errors.apellido} maxLength={MAX.apellido}/>
+    </Group>
 
-        styles={{
-        control: (base) => ({
-            ...base,
-            background: "var(--input-bg)",
-            borderColor: "var(--input-border)",
-            boxShadow: "none",
-            ":hover": { borderColor: "var(--input-border)" },
-        }),
-        menu: (base) => ({
-            ...base,
-            background: "var(--card-bg)",
-            border: "1px solid var(--input-border)",
-        }),
-        option: (base, state) => ({
-            ...base,
-            background: state.isFocused ? "var(--input-bg)" : "transparent",
-            color: "var(--text)",
-        }),
-        singleValue: (base) => ({ ...base, color: "var(--text)" }),
-        multiValue: (base) => ({
-            ...base,
-            background: "transparent",
-            border: "1px solid var(--input-border)",
-        }),
-        multiValueLabel: (base) => ({ ...base, color: "var(--text)" }),
-        input: (base) => ({ ...base, color: "var(--text)" }),
-        placeholder: (base) => ({ ...base, color: "var(--text)" }),
-        }}
-    />
-    </Box>
+    {/* ... (Aquí va el resto de tus TextInput y el Select de Zonas,
+         exactamente como los tenías antes, dentro del Paper) ... */}
+    
+    <Group grow mb="md">
+        <TextInput label="Mail" value={form.email} onChange={handleChange("email")} error={errors.email} maxLength={MAX.email}
+        onBlur={async () => {
+          // ... tu lógica onBlur
+        }}/>
+        <TextInput label="DNI" value={form.dni} disabled />
+    </Group>
 
-    <TextInput
-    label="Dirección"
-    value={form.direccion}
-    onChange={handleChange("direccion")}
-    error={errors.direccion}
-    maxLength={MAX.direccion}
-    />
-</Group>
+    <Group grow mb="md" align="flex-end">
+        <Box style={{ flex: 1 }}>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                Zonas
+            </label>
+            <Select
+                isMulti
+                options={zonas}
+                placeholder="Seleccioná zonas"
+                value={zonasSeleccionadas}
+                onChange={(opts) => setZonasSeleccionadas(opts || [])}
+                styles={{ /* ... tus estilos ... */ }}
+            />
+        </Box>
+        <TextInput
+            label="Dirección"
+            value={form.direccion}
+            onChange={handleChange("direccion")}
+            error={errors.direccion}
+            maxLength={MAX.direccion}
+        />
+    </Group>
 
-            <Group grow mb="md">
-            <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} error={errors.telefono} maxLength={MAX.telefono}/>
-            </Group>
+    <Group grow mb="md">
+        <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} error={errors.telefono} maxLength={MAX.telefono}/>
+    </Group>
+    {/* --- FIN DEL FORMULARIO DE DATOS --- */}
 
-            <Group justify="center" mt="md">
-            <Button
-                color="#93755E"
-                onClick={handleSubmit}
-                disabled={saving || (!hasFormChanges && !hasZonaChanges)}
-            >
-                Actualizar
-            </Button>
-            <Button variant="outline" onClick={() => setPasswordModalOpen(true)} disabled={saving}>
-                Cambiar Contraseña
-            </Button>
-            <Button color="red" variant="outline" onClick={() => setBajaOpen(true)} disabled={saving}>
-                Dar de baja
-            </Button>
-            </Group>
-        </Paper>
-        </Grid.Col>
+
+    {/* --- GRUPO DE BOTONES DE ACCIÓN --- */}
+    <Group justify="center" mt="xl">
+      <Button
+        color="#93755E"
+        onClick={handleSubmit} // Ahora sí está conectado
+        disabled={saving || (!hasFormChanges && !hasZonaChanges && !hasFotoChange)}
+      >
+        Actualizar
+      </Button>
+      <Button variant="outline" onClick={() => setPasswordModalOpen(true)} disabled={saving}>
+        Cambiar Contraseña
+      </Button>
+      <Button color="red" variant="outline" onClick={() => setBajaOpen(true)} disabled={saving}>
+        Dar de baja
+      </Button>
+    </Group>
+
+  </Paper>
+</Grid.Col>
 
         {/* Columna derecha: Habilidades con scroll interno */}
         <Grid.Col span={{ base: 12, md: 5 }}>

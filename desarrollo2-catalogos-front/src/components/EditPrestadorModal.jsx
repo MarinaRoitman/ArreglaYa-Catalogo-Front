@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert, Select } from "@mantine/core";
+import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert, MultiSelect } from "@mantine/core";
 import { fetchZonas } from "../Api/zonas";
 const MAX = 50;
 
@@ -29,25 +29,25 @@ telefono: "",
 direccion: "",
 id_zona: "",
 });
-const [zonas, setZonas] = useState([]); 
-const [formError, setFormError] = useState("");
+
+const [zonasDisponibles, setZonasDisponibles] = useState([]);
+const [zonasSeleccionadasIds, setZonasSeleccionadasIds] = useState([]);const [formError, setFormError] = useState("");
 
 useEffect(() => {
   if (opened) {
-    const loadZonas = async () => { // <-- Renombramos la función
+    const loadZonas = async () => {
       try {
-        const zonasData = await fetchZonas(); // <-- Ahora sí llama a la función importada
-        const zonasFormatted = zonasData.map(zona => ({
-          value: String(zona.id),
-          label: zona.nombre,
-        }));
-        setZonas(zonasFormatted);
+        const zonasData = await fetchZonas(); // Asumiendo que tienes fetchZonas en Api/zonas.js
+        setZonasDisponibles(
+          zonasData.map((z) => ({ value: String(z.id), label: z.nombre }))
+        );
       } catch (error) {
         console.error("Error al cargar zonas:", error);
       }
     };
-
-    loadZonas(); 
+    loadZonas();
+    const initialZonaIds = (initialData?.zonas || []).map(z => String(z.id));
+    setZonasSeleccionadasIds(initialZonaIds);
 
     const next = {
     nombre: initialData?.nombre ?? "",
@@ -70,37 +70,51 @@ useEffect(() => {
 }, [opened, initialData]);
 
 const validateField = (key, val) => {
-const v = (val ?? "").trim();
+  if (key === "zonas") {
+    // Si es un array y tiene al menos un elemento, es válido. Si no, devuelve el error.
+    return Array.isArray(val) && val.length > 0
+      ? ""
+      : "Debe seleccionar al menos una zona.";
+  }
 
-if (key === "nombre") return v ? "" : "El nombre es obligatorio.";
-if (key === "apellido") return v ? "" : "El apellido es obligatorio.";
-if (key === "direccion") return v ? "" : "La dirección es obligatoria.";
-if (key === "telefono") {
+  // Para TODOS los demás campos (que sí son de texto), aplicamos .trim()
+  const v = (val ?? "").trim();
+
+  // A partir de aquí, el resto de las validaciones para campos de texto.
+  if (key === "nombre") return v ? "" : "El nombre es obligatorio.";
+  if (key === "apellido") return v ? "" : "El apellido es obligatorio.";
+  if (key === "direccion") return v ? "" : "La dirección es obligatoria.";
+  if (key === "telefono") {
     if (!v) return "El teléfono es obligatorio.";
     if (!/^\d+$/.test(v)) return "El teléfono debe tener solo números.";
     return "";
-}
-if (key === "email") {
+  }
+  if (key === "email") {
     if (!v) return "El email es obligatorio.";
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "Ingresá un e-mail válido.";
-}
-  if (key === "id_zona") return v ? "" : "La zona es obligatoria.";
-  return "";
+  }
+  
+  return ""; // Si el campo no tiene regla de validación, es válido.
 };
 
+// REEMPLAZA TU FUNCIÓN validateAll POR ESTA:
 const validateAll = (data = values) => {
-const nextErrors = {
+  const nextErrors = {
     nombre: validateField("nombre", data.nombre),
     apellido: validateField("apellido", data.apellido),
     email: validateField("email", data.email),
     telefono: validateField("telefono", data.telefono),
     direccion: validateField("direccion", data.direccion),
-    id_zona: validateField("id_zona", data.id_zona),
-};
-const isValid = Object.values(nextErrors).every((e) => !e);
-setErrors(nextErrors);
-setFormError(isValid ? "" : "Revisá los campos marcados.");
-return isValid;
+    
+    // --- LA CORRECCIÓN CLAVE ESTÁ AQUÍ ---
+    // Le decimos que para validar las 'zonas', debe usar el estado 'zonasSeleccionadasIds'
+    zonas: validateField("zonas", zonasSeleccionadasIds), 
+  };
+
+  const isValid = Object.values(nextErrors).every((e) => !e);
+  setErrors(nextErrors);
+  setFormError(isValid ? "" : "Revisá los campos marcados.");
+  return isValid;
 };
 
 const handleChange = (field) => (e) => {
@@ -129,12 +143,11 @@ const handleSubmit = async () => {
     email: values.email.trim(),
     telefono: values.telefono.trim(),
     direccion: values.direccion.trim(),
-    id_zona: values.id_zona ? parseInt(values.id_zona, 10) : null, 
+    zonas: zonasSeleccionadasIds.map(id => parseInt(id, 10)),
   };
 
   await onSave?.(payload);
 };
-
 
 return (
 <Modal
@@ -226,19 +239,18 @@ return (
     />
   </Grid.Col>
 
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <Select
-      label="Zona de Trabajo"
-      placeholder="Seleccione una zona"
-      data={zonas}
-      value={String(values.id_zona)} // El valor del Select debe ser un string
-      onChange={(value) => handleChange("id_zona")({ currentTarget: { value } })}
-      withAsterisk
-      error={errors.id_zona}
-      disabled={loading}
-      searchable
-    />
-  </Grid.Col>
+<Grid.Col span={12}>
+  <MultiSelect
+    label="Zonas de trabajo"
+    placeholder="Seleccione una o más zonas"
+    data={zonasDisponibles}
+    value={zonasSeleccionadasIds}
+    onChange={setZonasSeleccionadasIds}
+    searchable
+    clearable
+    disabled={loading}
+  />
+</Grid.Col>
 </Grid>
 
     <Group justify="space-between" mt="md">
