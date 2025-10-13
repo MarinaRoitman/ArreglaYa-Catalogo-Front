@@ -42,9 +42,6 @@ const handleChange = (e) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // --- INICIO DE CORRECCIONES ---
-
-    // 1. Validar que las contraseñas coincidan
     if (formData.password !== formData.repitaContrasena) {
       setModalMsg("Las contraseñas no coinciden");
       setIsSuccess(false);

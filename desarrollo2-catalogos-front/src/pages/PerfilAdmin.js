@@ -196,7 +196,6 @@ try {
     }
 
     setMe(norm);
-    const initialFoto = norm.foto || "";
 
 
 setMe(norm);
@@ -256,7 +255,7 @@ setInfo("");
 const value = e.target.value;
 const next = { ...form, [key]: value };
 setForm(next);
-setFormErrors(validateProfile(next)); // validación en tiempo real
+setFormErrors({}); // Iniciar sin errores visuales
 };
 
 const handleSave = async () => {
@@ -486,7 +485,7 @@ return (
             <Button
                 leftSection={<IconDeviceFloppy size={16} />}
                 onClick={handleSave}
-        disabled={Object.keys(formErrors).length > 0 || (!fotoFile && shallowEqualProfile(form, originalForm))}
+            disabled={(!isDirty && !fotoFile) || !profileValid}
             >
                 Guardar cambios
             </Button>

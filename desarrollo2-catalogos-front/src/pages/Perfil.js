@@ -203,6 +203,8 @@ const selectedZonaIds = zonasSeleccionadas.map((z) => z.value);
 const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 const hasFotoChange = fotoFile != null;
 
+
+// REEMPLAZA TU FUNCIÓN handleSubmit COMPLETA POR ESTA:
 const handleSubmit = async () => {
   try {
     setSaving(true);
@@ -215,20 +217,25 @@ const handleSubmit = async () => {
       return;
     }
 
+    // --- LÓGICA DE VALIDACIÓN ---
     if (hasFormChanges) {
       const { isValid, nextErrors } = validateForm(form);
       setErrors(nextErrors);
       if (!isValid) {
         throw new Error("Revisá los campos marcados.");
       }
+      
+      // --- LA LLAMADA QUE FALTABA ESTÁ AQUÍ ---
+      // Verificamos si el email cambió y si el nuevo ya está en uso.
       const email = form.email?.trim();
-      if (email && email !== originalForm.email) {
-        const available = await isEmailAvailable(email);
+      if (email && originalForm && email !== originalForm.email) {
+        const available = await isEmailAvailable(email); // <--- SE VUELVE A USAR AQUÍ
         if (!available) {
           setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
           throw new Error("Revisá los campos marcados.");
         }
       }
+      // --- FIN DE LA CORRECCIÓN ---
     }
 
     // --- PREPARACIÓN DEL PAYLOAD ---
@@ -239,24 +246,20 @@ const handleSubmit = async () => {
       email: form.email,
       telefono: form.telefono,
     };
-
-    // --- LA SOLUCIÓN DEFINITIVA ESTÁ AQUÍ ---
-    // 1. Añadimos explícitamente el ID al payload.
-    // Esto es lo que faltaba y causaba el error "Prestador no encontrado".
-    payload.id = prestadorId;
-
+    
     if (hasFotoChange) {
       const newFotoUrl = await uploadImageToImgur(fotoFile);
       payload.foto = newFotoUrl;
-        localStorage.setItem("userFoto", newFotoUrl);
     }
 
+    // --- EJECUCIÓN DE LAS ACTUALIZACIONES ---
     if (hasFormChanges || hasFotoChange) {
       await updatePrestador(prestadorId, payload);
       setOriginalForm({ ...form });
       if (hasFotoChange) {
         setFotoUrl(payload.foto);
         setFotoFile(null);
+        localStorage.setItem("userFoto", payload.foto);
       }
     }
 
