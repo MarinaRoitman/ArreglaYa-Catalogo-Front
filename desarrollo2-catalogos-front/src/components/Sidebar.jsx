@@ -147,11 +147,15 @@ export default function Sidebar() {
                 color="#b67747ff"
               />
               <Divider my="md" />
-              <NavLink
-                label="Ir a Pagos"
-                leftSection={<IconCreditCard size={18} />}
-                color="#b67747ff"
-              />
+            <NavLink
+              label="Ir a Pagos"
+              leftSection={<IconCreditCard size={18} />}
+              color="#b67747ff"
+              component="a"
+              href="https://desarrollo-aplicaciones-front-rkjc7l3lb.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+            />
             </>
           )}
         </Box>
