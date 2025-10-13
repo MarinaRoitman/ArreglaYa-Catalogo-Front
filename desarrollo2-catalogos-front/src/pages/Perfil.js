@@ -225,7 +225,6 @@ const handleSubmit = async () => {
         throw new Error("Revisá los campos marcados.");
       }
       
-      // --- LA LLAMADA QUE FALTABA ESTÁ AQUÍ ---
       // Verificamos si el email cambió y si el nuevo ya está en uso.
       const email = form.email?.trim();
       if (email && originalForm && email !== originalForm.email) {
@@ -235,7 +234,6 @@ const handleSubmit = async () => {
           throw new Error("Revisá los campos marcados.");
         }
       }
-      // --- FIN DE LA CORRECCIÓN ---
     }
 
     // --- PREPARACIÓN DEL PAYLOAD ---
@@ -397,9 +395,8 @@ return (
     <Grid gutter="xl" align="stretch">
         {/* Columna izquierda: Editar Perfil */}
         <Grid.Col span={{ base: 12, md: 7 }}>
-  {/* Usamos un solo Paper para todo el contenido de la columna */}
-  <Paper p="lg" withBorder radius="lg" shadow="sm" style={{ background: "var(--app-bg)" }}>
-
+      
+      <Paper p="lg" withBorder radius="lg" shadow="sm">
     {/* Título General */}
     <Text fw={600} fz="lg" mb="md" ta="center">
       Editar Perfil
@@ -430,45 +427,78 @@ return (
       <TextInput label="Nombre" value={form.nombre} onChange={handleChange("nombre")} error={errors.nombre} maxLength={MAX.nombre}/>
       <TextInput label="Apellido" value={form.apellido} onChange={handleChange("apellido")} error={errors.apellido} maxLength={MAX.apellido}/>
     </Group>
-
-    {/* ... (Aquí va el resto de tus TextInput y el Select de Zonas,
-         exactamente como los tenías antes, dentro del Paper) ... */}
     
     <Group grow mb="md">
         <TextInput label="Mail" value={form.email} onChange={handleChange("email")} error={errors.email} maxLength={MAX.email}
         onBlur={async () => {
-          // ... tu lógica onBlur
         }}/>
         <TextInput label="DNI" value={form.dni} disabled />
     </Group>
 
     <Group grow mb="md" align="flex-end">
-        <Box style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
-                Zonas
-            </label>
-            <Select
-                isMulti
-                options={zonas}
-                placeholder="Seleccioná zonas"
-                value={zonasSeleccionadas}
-                onChange={(opts) => setZonasSeleccionadas(opts || [])}
-                styles={{ /* ... tus estilos ... */ }}
-            />
-        </Box>
-        <TextInput
-            label="Dirección"
-            value={form.direccion}
-            onChange={handleChange("direccion")}
-            error={errors.direccion}
-            maxLength={MAX.direccion}
-        />
-    </Group>
+    <Box style={{ flex: 1 }}>
+    <label
+        style={{
+        display: "block",
+        fontSize: 14,
+        fontWeight: 500,
+        marginBottom: 6,
+        color: "var(--text)",
+        }}
+    >
+        Zonas
+    </label>
+
+    <Select
+        isMulti
+        options={zonas}
+        placeholder="Seleccioná zonas"
+        value={zonasSeleccionadas}
+        onChange={(opts) => setZonasSeleccionadas(opts || [])}
+
+        styles={{
+        control: (base) => ({
+            ...base,
+            background: "var(--input-bg)",
+            borderColor: "var(--input-border)",
+            boxShadow: "none",
+            ":hover": { borderColor: "var(--input-border)" },
+        }),
+        menu: (base) => ({
+            ...base,
+            background: "var(--card-bg)",
+            border: "1px solid var(--input-border)",
+        }),
+        option: (base, state) => ({
+            ...base,
+            background: state.isFocused ? "var(--input-bg)" : "transparent",
+            color: "var(--text)",
+        }),
+        singleValue: (base) => ({ ...base, color: "var(--text)" }),
+        multiValue: (base) => ({
+            ...base,
+            background: "transparent",
+            border: "1px solid var(--input-border)",
+        }),
+        multiValueLabel: (base) => ({ ...base, color: "var(--text)" }),
+        input: (base) => ({ ...base, color: "var(--text)" }),
+        placeholder: (base) => ({ ...base, color: "var(--text)" }),
+        }}
+    />
+    </Box>
+
+    <TextInput
+    label="Dirección"
+    value={form.direccion}
+    onChange={handleChange("direccion")}
+    error={errors.direccion}
+    maxLength={MAX.direccion}
+    />
+</Group>
 
     <Group grow mb="md">
         <TextInput label="Teléfono" value={form.telefono} onChange={handleChange("telefono")} error={errors.telefono} maxLength={MAX.telefono}/>
     </Group>
-    {/* --- FIN DEL FORMULARIO DE DATOS --- */}
 
 
     {/* --- GRUPO DE BOTONES DE ACCIÓN --- */}
