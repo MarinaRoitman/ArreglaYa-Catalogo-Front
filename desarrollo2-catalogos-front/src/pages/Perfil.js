@@ -248,8 +248,7 @@ const handleSubmit = async () => {
     if (hasFotoChange) {
       const newFotoUrl = await uploadImageToImgur(fotoFile);
       payload.foto = newFotoUrl;
-      localStorage.setItem("userFoto", newFotoUrl);
-
+        localStorage.setItem("userFoto", newFotoUrl);
     }
 
     if (hasFormChanges || hasFotoChange) {

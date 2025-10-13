@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, ScrollArea, Stack, Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
+import { Box, ScrollArea,  Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
 import {
   IconListDetails,
   IconBolt,
@@ -38,6 +38,7 @@ export default function Sidebar() {
       localStorage.removeItem("userName");
       localStorage.removeItem("role");
       localStorage.removeItem("prestador_id");
+      localStorage.removeItem("userFoto");
       sessionStorage.clear();
     } finally {
       setLoading(false);

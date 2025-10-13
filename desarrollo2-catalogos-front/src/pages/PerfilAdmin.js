@@ -137,11 +137,14 @@ const [error, setError] = useState("");
 const [info, setInfo] = useState("");
 
 const [me, setMe] = useState(null);
-const [form, setForm] = useState({ nombre: "", apellido: "", email: "" });
-const [formErrors, setFormErrors] = useState({}); // << errores de perfil
+  const [originalForm, setOriginalForm] = useState(null); // Para comparar cambios
+  const [form, setForm] = useState({ nombre: "", apellido: "", email: "" });
+  const [formErrors, setFormErrors] = useState({});
 
-const [fotoFile, setFotoFile] = useState(null);
-const [fotoPreview, setFotoPreview] = useState("");
+  // --- Estados de la foto idénticos a Perfil.js ---
+  const [fotoUrl, setFotoUrl] = useState("");       // Foto actual guardada
+  const [fotoFile, setFotoFile] = useState(null);     // Nuevo archivo a subir
+  const [fotoPreview, setFotoPreview] = useState(""); // Vista previa en el avatar// La vista previa que se muestra
 
 const [pwd, setPwd] = useState({ newPwd: "", newPwd2: "" });
 const [pwdErrors, setPwdErrors] = useState({});   // << errores de password
@@ -193,15 +196,21 @@ try {
     }
 
     setMe(norm);
-    setFotoPreview(norm.foto || ""); // Establece la vista previa inicial
-    const nextForm = {
-    nombre: norm.nombre,
-    apellido: norm.apellido,
-    email: norm.email,
-    };
-    setForm(nextForm);
-    setFormErrors(validateProfile(nextForm)); // validar al cargar
-    setError("");
+    const initialFoto = norm.foto || "";
+
+
+setMe(norm);
+      
+      const initialForm = {
+        nombre: norm.nombre,
+        apellido: norm.apellido,
+        email: norm.email,
+      };
+      setForm(initialForm);
+      setOriginalForm(initialForm); // Guardamos el estado original
+      
+
+    
 } catch (e) {
     if (e?.code === "AUTH") {
     navigate("/login", { replace: true });
@@ -251,70 +260,66 @@ setFormErrors(validateProfile(next)); // validación en tiempo real
 };
 
 const handleSave = async () => {
-  setError("");
-  setInfo("");
-
-  const hasFotoChange = fotoFile != null;
-
-  if (!isDirty && !hasFotoChange) {
-    setInfo("No hay cambios para guardar.");
-    return;
-  }
-
-  const errs = validateProfile(form);
-  setFormErrors(errs);
-  if (Object.keys(errs).length > 0) {
-    setError("Revisá los campos del perfil.");
-    return;
-  }
-
-  const targetId = me?.id ?? idAdminSync;
-  if (!targetId) {
-    setError("Admin no encontrado.");
-    return;
-  }
-
-  try {
-    setSaving(true);
-
-    const payload = {
-      nombre: form.nombre.trim(),
-      apellido: form.apellido.trim(),
-      email: form.email.trim(),
-    };
-
-    // --- LA SOLUCIÓN CLAVE ESTÁ AQUÍ ---
-    // 1. Añadimos el ID del admin al payload.
-    // Esto es lo que faltaba y causaba el error "Admin no encontrado".
-    payload.id = targetId;
-
-    // 2. Si hay una foto nueva, la subimos y añadimos la URL.
-    if (hasFotoChange) {
-      const newFotoUrl = await uploadImageToImgur(fotoFile);
-      payload.foto = newFotoUrl;
-    }
-
-    const updated = await updateAdmin(targetId, payload);
-    const norm = normalizeAdmin(updated);
-
-    if (!norm.id) {
-      setError("Admin no encontrado.");
+    setError("");
+    setInfo("");
+  
+    const hasFotoChange = fotoFile != null;
+    // Comparamos contra el estado original, no contra 'me'
+    const hasFormChanges = !shallowEqualProfile(form, originalForm);
+  
+    if (!hasFormChanges && !hasFotoChange) {
+      setInfo("No hay cambios para guardar.");
       return;
     }
-
-    setMe(norm);
-    setForm({ nombre: norm.nombre, apellido: norm.apellido, email: norm.email });
-    setFotoFile(null);
-    setFotoPreview(norm.foto);
-    
-    setInfo("Cambios guardados.");
-    setError("");
-  } catch (e) {
-    setError(e?.message || "No se pudo guardar.");
-  } finally {
-    setSaving(false);
-  }
-};
+  
+    const errs = validateProfile(form);
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setError("Revisá los campos del perfil.");
+      return;
+    }
+  
+    const targetId = me?.id;
+    if (!targetId) {
+      setError("ID de Admin no encontrado.");
+      return;
+    }
+  
+    try {
+      setSaving(true);
+  
+      const payload = { ...form };
+      payload.id = targetId; // Incluimos el ID en el payload
+  
+      if (hasFotoChange) {
+        const newFotoUrl = await uploadImageToImgur(fotoFile);
+        payload.foto = newFotoUrl;
+        localStorage.setItem("userFoto", newFotoUrl); // Actualizar foto en sidebar
+      }
+  
+      if (hasFormChanges || hasFotoChange) {
+        const updated = await updateAdmin(targetId, payload);
+        const norm = normalizeAdmin(updated);
+  
+        setMe(norm); // Actualizamos el admin completo
+        const updatedForm = { nombre: norm.nombre, apellido: norm.apellido, email: norm.email };
+        setForm(updatedForm);
+        setOriginalForm(updatedForm); // Reseteamos el estado original
+  
+        if (hasFotoChange) {
+          setFotoUrl(norm.foto);
+          setFotoFile(null); // Limpiamos el archivo para evitar re-subidas
+        }
+      }
+  
+      setInfo("Cambios guardados.");
+      
+    } catch (e) {
+      setError(e?.message || "No se pudo guardar.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
 const handleChangePassword = async () => {
 setError("");
@@ -423,17 +428,18 @@ return (
         )}
 
 {/* --- SECCIÓN DE FOTO DE PERFIL --- */}
+{/* --- SECCIÓN DE FOTO DE PERFIL --- */}
 <Stack align="center" gap="md">
   <Avatar src={fotoPreview} size={120} radius="100%" />
   <Group>
     <FileButton onChange={setFotoFile} accept="image/png,image/jpeg">
       {(props) => <Button {...props}>Seleccionar foto</Button>}
     </FileButton>
-    <Button
+<Button
       variant="default"
       onClick={() => {
         setFotoFile(null);
-        setFotoPreview(me?.foto || ""); // Vuelve a la foto original guardada
+        setFotoPreview(fotoUrl); // Vuelve a la foto original guardada
       }}
       disabled={!fotoFile}
     >
@@ -480,7 +486,7 @@ return (
             <Button
                 leftSection={<IconDeviceFloppy size={16} />}
                 onClick={handleSave}
-                disabled={(!isDirty && !fotoFile) || Object.keys(formErrors).length > 0 || !profileValid}
+        disabled={Object.keys(formErrors).length > 0 || (!fotoFile && shallowEqualProfile(form, originalForm))}
             >
                 Guardar cambios
             </Button>
