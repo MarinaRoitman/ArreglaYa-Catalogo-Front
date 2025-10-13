@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, ScrollArea, Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
+import { Box, ScrollArea, Stack, Group, Avatar, Text, NavLink, Divider } from "@mantine/core";
 import {
   IconListDetails,
   IconBolt,
@@ -22,9 +22,10 @@ export default function Sidebar() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const initial = localStorage.getItem("userName") || "Usuario";
-  const onlyName = initial.split(" ")[0];
-  const [userName] = useState(onlyName);
+
+
+  const userName = localStorage.getItem("userName") || "Usuario";
+  const userFoto = localStorage.getItem("userFoto"); // 1. Leemos la URL de la foto
   const initials = userName ? userName[0].toUpperCase() : "";
 
   const role = (localStorage.getItem("role") || "").toLowerCase().trim();
@@ -54,16 +55,17 @@ export default function Sidebar() {
         boxShadow: "4px 0 12px -4px rgba(0,0,0,0.12)",
       }}
     >
-      <ScrollArea type="never" style={{ flex: 1 }}>
-        <Box p="md">
-          <Group align="center" gap="md">
-            <Avatar radius="xl" color="#b67747ff">
-              {initials}
-            </Avatar>
-            <Text size="sm" fw={600}>
-              ¡Bienvenid@ {userName}!
-            </Text>
-          </Group>
+    <ScrollArea type="never" style={{ flex: 1 }}>
+      <Box p="md">
+        <Group align="center" gap="md" wrap="nowrap">
+          {/* 2. Pasamos la URL de la foto al Avatar */}
+          <Avatar src={userFoto} radius="xl" color="#b67747ff">
+            {initials} {/* Mantenemos las iniciales como fallback */}
+          </Avatar>
+          <Text size="sm" fw={600} truncate="end">
+            ¡Bienvenid@ {userName}!
+          </Text>
+        </Group>
 
           {isAdmin ? (
             // ====== MENÚ ADMIN ======

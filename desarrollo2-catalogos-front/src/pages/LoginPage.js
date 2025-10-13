@@ -141,6 +141,7 @@ export default function LoginPage() {
             if (prestadorRes.ok) {
               const prestador = await prestadorRes.json();
               localStorage.setItem("userName", prestador?.nombre || name || "Usuario");
+              localStorage.setItem("userFoto", prestador?.foto || ""); // Guardamos la URL de la foto
             } else {
               localStorage.setItem("userName", name || "Usuario");
             }

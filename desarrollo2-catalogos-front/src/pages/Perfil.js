@@ -29,9 +29,8 @@ removeZonaFromPrestador,
 getPrestadores
 } from "../Api/prestadores";
 
-import {
-uploadImageToImgur
-} from "../Api/imgur";
+import { uploadImageToImgur } from "../Api/imgur";
+
 
 import ModalCambiarContrasena from "../components/ModalCambiarContrasena";
 
@@ -204,7 +203,6 @@ const selectedZonaIds = zonasSeleccionadas.map((z) => z.value);
 const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 const hasFotoChange = fotoFile != null;
 
-// REEMPLAZA TU FUNCIÓN handleSubmit POR ESTA:
 const handleSubmit = async () => {
   try {
     setSaving(true);
@@ -212,23 +210,17 @@ const handleSubmit = async () => {
     const prestadorId = localStorage.getItem("prestador_id");
     if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    // Si no hay ningún cambio, no hacemos nada más que mostrar éxito.
     if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
       setSuccessOpen(true);
       return;
     }
 
-    // --- LÓGICA DE VALIDACIÓN PRIMERO ---
-    // Si hay cambios en el formulario, es obligatorio validar antes de continuar.
     if (hasFormChanges) {
       const { isValid, nextErrors } = validateForm(form);
       setErrors(nextErrors);
       if (!isValid) {
-        // Si no es válido, detenemos todo.
         throw new Error("Revisá los campos marcados.");
       }
-
-      // Chequeo de email duplicado (solo si cambió)
       const email = form.email?.trim();
       if (email && email !== originalForm.email) {
         const available = await isEmailAvailable(email);
@@ -240,7 +232,6 @@ const handleSubmit = async () => {
     }
 
     // --- PREPARACIÓN DEL PAYLOAD ---
-    // Creamos un payload base con los datos del formulario (ya validados si fue necesario).
     const payload = {
       nombre: form.nombre,
       apellido: form.apellido,
@@ -249,17 +240,20 @@ const handleSubmit = async () => {
       telefono: form.telefono,
     };
 
-    // Si hay una foto nueva, la subimos a Imgur y añadimos la URL al payload.
+    // --- LA SOLUCIÓN DEFINITIVA ESTÁ AQUÍ ---
+    // 1. Añadimos explícitamente el ID al payload.
+    // Esto es lo que faltaba y causaba el error "Prestador no encontrado".
+    payload.id = prestadorId;
+
     if (hasFotoChange) {
       const newFotoUrl = await uploadImageToImgur(fotoFile);
       payload.foto = newFotoUrl;
+      localStorage.setItem("userFoto", newFotoUrl);
+
     }
 
-    // --- EJECUCIÓN DE LAS ACTUALIZACIONES ---
-    // Si hubo cambios en el formulario o en la foto, llamamos a updatePrestador.
     if (hasFormChanges || hasFotoChange) {
       await updatePrestador(prestadorId, payload);
-      // Actualizamos el estado original para reflejar los nuevos datos guardados.
       setOriginalForm({ ...form });
       if (hasFotoChange) {
         setFotoUrl(payload.foto);
@@ -267,7 +261,6 @@ const handleSubmit = async () => {
       }
     }
 
-    // La lógica de las zonas se ejecuta de forma independiente.
     if (hasZonaChanges) {
       const toAdd = selectedZonaIds.filter((id) => !originalZonasIds.includes(id));
       const toRemove = originalZonasIds.filter((id) => !selectedZonaIds.includes(id));
