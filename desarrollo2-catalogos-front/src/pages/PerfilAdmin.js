@@ -9,8 +9,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 
-import { uploadImageToCloudinary } from '../Api/cloudinary';
-
+import * as CloudinaryAPI from "../Api/cloudinary";
 import {
 getAdminById,
 updateAdmin,
@@ -73,7 +72,6 @@ const activo = raw.activo ?? true;
 return { id, nombre, apellido, email, foto, activo };
 }
 
-// compara solo nombre, apellido, email
 function shallowEqualProfile(a, b) {
 return (
 (a?.nombre ?? "") === (b?.nombre ?? "") &&
@@ -292,7 +290,7 @@ const handleSave = async () => {
       payload.id = targetId; // Incluimos el ID en el payload
   
       if (hasFotoChange) {
-      const newFotoUrl = await uploadImageToCloudinary(fotoFile); //
+      const newFotoUrl = await CloudinaryAPI.uploadImageToCloudinary(fotoFile);
       payload.foto = newFotoUrl;
       localStorage.setItem("userFoto", newFotoUrl);
     }

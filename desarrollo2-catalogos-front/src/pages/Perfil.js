@@ -29,8 +29,7 @@ removeZonaFromPrestador,
 getPrestadores
 } from "../Api/prestadores";
 
-import { uploadImageToImgur } from "../Api/imgur";
-
+import { uploadImageToCloudinary } from "../Api/cloudinary"; //
 
 import ModalCambiarContrasena from "../components/ModalCambiarContrasena";
 
@@ -246,7 +245,7 @@ const handleSubmit = async () => {
     };
     
     if (hasFotoChange) {
-      const newFotoUrl = await uploadImageToImgur(fotoFile);
+      const newFotoUrl = await uploadImageToCloudinary(fotoFile); //
       payload.foto = newFotoUrl;
     }
 
