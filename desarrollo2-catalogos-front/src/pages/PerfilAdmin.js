@@ -8,7 +8,8 @@ import { useNavigate } from "react-router-dom";
 
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import { uploadImageToImgur } from "../Api/imgur";
+
+import { uploadImageToCloudinary } from '../Api/cloudinary';
 
 import {
 getAdminById,
@@ -291,10 +292,10 @@ const handleSave = async () => {
       payload.id = targetId; // Incluimos el ID en el payload
   
       if (hasFotoChange) {
-        const newFotoUrl = await uploadImageToImgur(fotoFile);
-        payload.foto = newFotoUrl;
-        localStorage.setItem("userFoto", newFotoUrl); // Actualizar foto en sidebar
-      }
+      const newFotoUrl = await uploadImageToCloudinary(fotoFile); //
+      payload.foto = newFotoUrl;
+      localStorage.setItem("userFoto", newFotoUrl);
+    }
   
       if (hasFormChanges || hasFotoChange) {
         const updated = await updateAdmin(targetId, payload);
