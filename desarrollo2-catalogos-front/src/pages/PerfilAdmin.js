@@ -205,8 +205,12 @@ setMe(norm);
         email: norm.email,
       };
       setForm(initialForm);
-      setOriginalForm(initialForm); // Guardamos el estado original
+      setOriginalForm(initialForm); 
+    
+      setFotoUrl(norm.foto);
+      setFotoPreview(norm.foto);
       
+      localStorage.setItem("userFoto", norm.foto);
 
     
 } catch (e) {
@@ -287,7 +291,7 @@ const handleSave = async () => {
       setSaving(true);
   
       const payload = { ...form };
-      payload.id = targetId; // Incluimos el ID en el payload
+      payload.id = targetId; 
   
       if (hasFotoChange) {
       const newFotoUrl = await CloudinaryAPI.uploadImageToCloudinary(fotoFile);
