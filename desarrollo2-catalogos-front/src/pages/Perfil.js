@@ -26,7 +26,6 @@ updatePrestador,
 cambiarContrasena,
 addZonaToPrestador,
 removeZonaFromPrestador,
-getPrestadores
 } from "../Api/prestadores";
 
 import { uploadImageToCloudinary } from "../Api/cloudinary"; //
@@ -53,22 +52,45 @@ const isDesktop = useMediaQuery("(min-width: 1200px)");
 const [zonas, setZonas] = useState([]);
 const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 const [form, setForm] = useState({
-nombre: "",
-apellido: "",
-email: "",
-direccion: "",
-telefono: "",
-dni: "",
-foto: "",
+  nombre: "",
+  apellido: "",
+  email: "",
+  telefono: "",
+  dni: "",
+  foto: "",
+  estado: "",
+  ciudad: "",
+  calle: "",
+  numero: "",
+  piso: "",
+  departamento: "",
 });
 
 const [errors, setErrors] = useState({
-nombre: "",
-apellido: "",
-email: "",
-direccion: "",
-telefono: "",
+  nombre: "",
+  apellido: "",
+  email: "",
+  telefono: "",
+  estado: "",
+  ciudad: "",
+  calle: "",
+  numero: "",
+  piso: "",
+  departamento: "",
 });
+
+const MAX = {
+  nombre: 30,
+  apellido: 30,
+  email: 60,
+  telefono: 15,
+  estado: 50,
+  ciudad: 50,
+  calle: 50,
+  numero: 5,
+  piso: 3,
+  departamento: 2,
+};
 
 const [originalForm, setOriginalForm] = useState(null);
 const [originalZonasIds, setOriginalZonasIds] = useState([]);
@@ -90,14 +112,6 @@ const [fotoUrl, setFotoUrl] = useState(""); // La foto actual del prestador
 const [fotoFile, setFotoFile] = useState(null); // El nuevo archivo a subir
 const [fotoPreview, setFotoPreview] = useState("");
 
-const MAX = {
-    nombre: 30,
-    apellido: 30,
-    email: 60,
-    direccion: 60,
-    telefono: 15,
-};
-
 useEffect(() => {
     
 const load = async () => {
@@ -113,14 +127,19 @@ const load = async () => {
 
     setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
 
-    const nextForm = {
-        nombre: prestador.nombre || "",
-        apellido: prestador.apellido || "",
-        email: prestador.email || "",
-        direccion: prestador.direccion || "",
-        telefono: prestador.telefono || "",
-        dni: prestador.dni || "",
-    };
+const nextForm = {
+    nombre: prestador.nombre || "",
+    apellido: prestador.apellido || "",
+    email: prestador.email || "",
+    telefono: prestador.telefono || "",
+    dni: prestador.dni || "",
+    estado: prestador.estado || prestador.estado_pri || "",
+    ciudad: prestador.ciudad || prestador.ciudad_pri || "",
+    calle: prestador.calle || prestador.calle_pri || "",
+    numero: prestador.numero || prestador.numero_pri || "",
+    piso: prestador.piso || prestador.piso_pri || "",
+    departamento: prestador.departamento || prestador.departamento_pri || "",
+};
     setForm(nextForm);
     setOriginalForm(nextForm);
 
@@ -145,6 +164,10 @@ const load = async () => {
 load();
 }, []);
 
+const onlyLetters = (s = "") => s.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, "");
+const onlyLettersNoSpace = (s = "") => s.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
+const onlyDigits = (s = "") => s.replace(/\D+/g, "");
+
 useEffect(() => {
     if (!fotoFile) {
       return; // Si no hay archivo, no hagas nada
@@ -157,51 +180,63 @@ useEffect(() => {
   }, [fotoFile]);
 
 const handleChange = (key) => (e) => {
-const val = e?.target ? e.target.value : e;
+  const input = e?.target ? e.target.value : e;
+  let val = typeof input === "string" ? input : String(input ?? "");
 
 // Sanitizar + recortar por máximo
-let newVal =
-    key === "telefono"
-    ? (val || "").replace(/\D+/g, "")
-    : typeof val === "string"
-    ? val
-    : String(val ?? "");
 
-if (MAX[key]) newVal = newVal.slice(0, MAX[key]); // límite de caracteres
+  if (MAX[key]) val = val.slice(0, MAX[key]); // límite de caracteres
 
-setForm((prev) => ({ ...prev, [key]: newVal }));
+// Sanitizado por campo
+  if (["estado", "ciudad", "calle"].includes(key)) val = onlyLetters(val);
+  if (["numero", "piso", "telefono"].includes(key)) val = onlyDigits(val);
+  if (key === "departamento") val = onlyLettersNoSpace(val.toUpperCase());
+
+setForm((prev) => ({ ...prev, [key]: val }));
 
 // Validación por campo
 setErrors((prev) => {
-    const draft = { ...prev };
-    if (key === "nombre") draft.nombre = newVal?.trim() ? "" : "El nombre es obligatorio.";
-    if (key === "apellido") draft.apellido = newVal?.trim() ? "" : "El apellido es obligatorio.";
-    if (key === "direccion") draft.direccion = newVal?.trim() ? "" : "La dirección es obligatoria.";
+    const d = { ...prev };
+
+    if (key === "nombre") d.nombre = val.trim() ? "" : "El nombre es obligatorio.";
+    if (key === "apellido") d.apellido = val.trim() ? "" : "El apellido es obligatorio.";
+
     if (key === "telefono") {
-    draft.telefono = !newVal?.trim()
+      d.telefono = !val.trim()
         ? "El teléfono es obligatorio."
-        : /^\d+$/.test(newVal)
+        : /^\d+$/.test(val)
         ? ""
         : "El teléfono debe tener solo números.";
     }
+
     if (key === "email") {
-    if (!newVal?.trim()) draft.email = "El mail es obligatorio.";
-    else
-        draft.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newVal.trim())
+      if (!val.trim()) d.email = "El mail es obligatorio.";
+      else d.email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim())
         ? ""
-        : "Ingresá un e-mail válido (con @ y dominio).";
+        : "Ingresá un e-mail válido.";
     }
-    return draft;
-});
+
+    if (key === "estado") d.estado = val.trim() ? "" : "El estado es obligatorio.";
+    if (key === "ciudad") d.ciudad = val.trim() ? "" : "La ciudad es obligatoria.";
+    if (key === "calle") d.calle = val.trim() ? "" : "La calle es obligatoria.";
+
+    if (key === "numero") d.numero = val ? "" : "El número es obligatorio.";
+    if (key === "piso") d.piso = ""; // opcional
+    if (key === "departamento") d.departamento = ""; // opcional
+
+    return d;
+  });
 };
 
-const formKeys = ["nombre", "apellido", "direccion", "email", "telefono", "dni"];
+const formKeys = [
+  "nombre","apellido","email","telefono","dni",
+  "estado","ciudad","calle","numero","piso","departamento"
+];
 const hasFormChanges =
 originalForm != null && !shallowEqualForm(form, originalForm, formKeys);
 const selectedZonaIds = zonasSeleccionadas.map((z) => z.value);
 const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 const hasFotoChange = fotoFile != null;
-
 
 // REEMPLAZA TU FUNCIÓN handleSubmit COMPLETA POR ESTA:
 const handleSubmit = async () => {
@@ -223,26 +258,21 @@ const handleSubmit = async () => {
       if (!isValid) {
         throw new Error("Revisá los campos marcados.");
       }
-      
-      // Verificamos si el email cambió y si el nuevo ya está en uso.
-      const email = form.email?.trim();
-      if (email && originalForm && email !== originalForm.email) {
-        const available = await isEmailAvailable(email); // <--- SE VUELVE A USAR AQUÍ
-        if (!available) {
-          setErrors((prev) => ({ ...prev, email: "Ese e-mail ya está en uso." }));
-          throw new Error("Revisá los campos marcados.");
-        }
-      }
     }
 
     // --- PREPARACIÓN DEL PAYLOAD ---
-    const payload = {
-      nombre: form.nombre,
-      apellido: form.apellido,
-      direccion: form.direccion,
-      email: form.email,
-      telefono: form.telefono,
-    };
+  const payload = {
+    nombre: form.nombre,
+    apellido: form.apellido,
+    email: form.email,
+    telefono: form.telefono,
+    estado: form.estado || "",
+    ciudad: form.ciudad || "",
+    calle: form.calle || "",
+    numero: form.numero || "",
+    piso: form.piso || "",
+    departamento: form.departamento || "",
+  };
     
     if (hasFotoChange) {
       const newFotoUrl = await uploadImageToCloudinary(fotoFile); //
@@ -324,45 +354,51 @@ return (habilidades || []).filter(
 
 // manejos de erroes en los campos de texto
 const validateForm = (data = form) => {
-const nextErrors = { nombre: "", apellido: "", email: "", direccion: "", telefono: "" };
+  const nextErrors = {
+    nombre: "", apellido: "", email: "", telefono: "",
+    estado: "", ciudad: "", calle: "", numero: "",
+    piso: "", departamento: "",
+  };
 
-// Requeridos
-if (!data.nombre?.trim()) nextErrors.nombre = "El nombre es obligatorio.";
-if (!data.apellido?.trim()) nextErrors.apellido = "El apellido es obligatorio.";
-if (!data.direccion?.trim()) nextErrors.direccion = "La dirección es obligatoria.";
-if (!data.telefono?.trim()) nextErrors.telefono = "El teléfono es obligatorio.";
-if (!data.email?.trim()) nextErrors.email = "El mail es obligatorio.";
+  // Requeridos
+  if (!data.nombre?.trim()) nextErrors.nombre = "El nombre es obligatorio.";
+  if (!data.apellido?.trim()) nextErrors.apellido = "El apellido es obligatorio.";
+  if (!data.email?.trim()) nextErrors.email = "El mail es obligatorio.";
+  if (!data.telefono?.trim()) nextErrors.telefono = "El teléfono es obligatorio.";
 
-// Email básico
-if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
-    nextErrors.email = "Ingresá un e-mail válido (con @ y dominio).";
-}
+  if (!data.estado?.trim()) nextErrors.estado = "El estado es obligatorio.";
+  if (!data.ciudad?.trim()) nextErrors.ciudad = "La ciudad es obligatoria.";
+  if (!data.calle?.trim()) nextErrors.calle = "La calle es obligatoria.";
+  if (!data.numero?.trim()) nextErrors.numero = "El número es obligatorio.";
 
-// Teléfono: solo dígitos
-if (data.telefono && !/^\d+$/.test(data.telefono.trim())) {
+  // Formatos
+  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+    nextErrors.email = "Ingresá un e-mail válido.";
+  }
+  if (data.telefono && !/^\d+$/.test(data.telefono.trim())) {
     nextErrors.telefono = "El teléfono debe tener solo números.";
-}
+  }
+  if (data.estado && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(data.estado.trim())) {
+    nextErrors.estado = "Solo letras y espacios.";
+  }
+  if (data.ciudad && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(data.ciudad.trim())) {
+    nextErrors.ciudad = "Solo letras y espacios.";
+  }
+  if (data.calle && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(data.calle.trim())) {
+    nextErrors.calle = "Solo letras y espacios.";
+  }
+  if (data.numero && !/^\d{1,5}$/.test(data.numero.trim())) {
+    nextErrors.numero = "Solo números (máx 5).";
+  }
+  if (data.piso && !/^\d{1,3}$/.test(data.piso.trim())) {
+    nextErrors.piso = "Solo números (máx 3).";
+  }
+  if (data.departamento && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{1,2}$/.test(data.departamento.trim())) {
+    nextErrors.departamento = "Solo letras (máx 2).";
+  }
 
-const isValid = Object.values(nextErrors).every((v) => !v);
-return { isValid, nextErrors };
-};
-
-// Verifica si el email está disponible (case-insensitive) ignorando el propio prestador
-const isEmailAvailable = async (email) => {
-  const e = (email || "").trim().toLowerCase();
-  if (!e) return false; // vacío no es válido
-
-  const prestadorId = localStorage.getItem("prestador_id");
-  const lista = await getPrestadores();
-
-  // buscá coincidencia exacta (insensible a may/min) en otro prestador distinto a mí
-  const clash = (lista || []).some((p) => {
-    const pid = String(p.id);
-    const mail = (p.email || "").trim().toLowerCase();
-    return pid !== String(prestadorId) && mail === e;
-  });
-
-  return !clash;
+  const isValid = Object.values(nextErrors).every((v) => !v);
+  return { isValid, nextErrors };
 };
 
 return (
@@ -486,13 +522,63 @@ return (
     />
     </Box>
 
-    <TextInput
-    label="Dirección"
-    value={form.direccion}
-    onChange={handleChange("direccion")}
-    error={errors.direccion}
-    maxLength={MAX.direccion}
-    />
+</Group>
+
+<Group grow mb="md">
+  <TextInput
+    label="Estado"
+    value={form.estado}
+    onChange={handleChange("estado")}
+    error={errors.estado}
+    maxLength={MAX.estado}
+    placeholder="Ej: Buenos Aires"
+  />
+  <TextInput
+    label="Ciudad"
+    value={form.ciudad}
+    onChange={handleChange("ciudad")}
+    error={errors.ciudad}
+    maxLength={MAX.ciudad}
+    placeholder="Ej: La Plata"
+  />
+</Group>
+
+<Group grow mb="md">
+  <TextInput
+    label="Calle"
+    value={form.calle}
+    onChange={handleChange("calle")}
+    error={errors.calle}
+    maxLength={MAX.calle}
+    placeholder="Ej: Calle 500"
+  />
+  <TextInput
+    label="Número"
+    value={form.numero}
+    onChange={handleChange("numero")}
+    error={errors.numero}
+    maxLength={MAX.numero}
+    placeholder="Ej: 1234"
+  />
+</Group>
+
+<Group grow mb="md">
+  <TextInput
+    label="Piso"
+    value={form.piso}
+    onChange={handleChange("piso")}
+    error={errors.piso}
+    maxLength={MAX.piso}
+    placeholder="Ej: 3"
+  />
+  <TextInput
+    label="Departamento"
+    value={form.departamento}
+    onChange={handleChange("departamento")}
+    error={errors.departamento}
+    maxLength={MAX.departamento}
+    placeholder="Ej: B"
+  />
 </Group>
 
     <Group grow mb="md">

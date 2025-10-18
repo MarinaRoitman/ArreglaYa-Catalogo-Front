@@ -1,43 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert, MultiSelect } from "@mantine/core";
 import { fetchZonas } from "../Api/zonas";
+
 const MAX = 50;
 
 export default function EditPrestadorModal({
-opened,
-initialData,              
-loading = false,
-onCancel,
-onSave,                   
-onOpenPassword,            
+  opened,
+  initialData,
+  loading = false,
+  onCancel,
+  onSave,
+  onOpenPassword,
 }) {
-const [values, setValues] = useState({
-nombre: "",
-apellido: "",
-email: "",
-telefono: "",
-direccion: "",
-dni: "",
-id_zona: "",
-});
+  const [values, setValues] = useState({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    estado: "",
+    ciudad: "",
+    calle: "",
+    numero: "",
+    piso: "",
+    departamento: "",
+    dni: "",
+  });
 
-const [errors, setErrors] = useState({
-nombre: "",
-apellido: "",
-email: "",
-telefono: "",
-direccion: "",
-id_zona: "",
-});
+  const [errors, setErrors] = useState({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    estado: "",
+    ciudad: "",
+    calle: "",
+    numero: "",
+  });
 
-const [zonasDisponibles, setZonasDisponibles] = useState([]);
-const [zonasSeleccionadasIds, setZonasSeleccionadasIds] = useState([]);const [formError, setFormError] = useState("");
+  const [zonasDisponibles, setZonasDisponibles] = useState([]);
+  const [zonasSeleccionadasIds, setZonasSeleccionadasIds] = useState([]);
+  const [formError, setFormError] = useState("");
 
-useEffect(() => {
-  if (opened) {
+  useEffect(() => {
+    if (!opened) return;
+
     const loadZonas = async () => {
       try {
-        const zonasData = await fetchZonas(); // Asumiendo que tienes fetchZonas en Api/zonas.js
+        const zonasData = await fetchZonas();
         setZonasDisponibles(
           zonasData.map((z) => ({ value: String(z.id), label: z.nombre }))
         );
@@ -46,227 +55,316 @@ useEffect(() => {
       }
     };
     loadZonas();
-    const initialZonaIds = (initialData?.zonas || []).map(z => String(z.id));
+
+    // zonas iniciales
+    const initialZonaIds = (initialData?.zonas || []).map((z) => String(z.id));
     setZonasSeleccionadasIds(initialZonaIds);
 
+    // mapeo inicial de valores
     const next = {
-    nombre: initialData?.nombre ?? "",
-    apellido: initialData?.apellido ?? "",
-    email: initialData?.email ?? initialData?.mail ?? "",
-    telefono: initialData?.telefono ?? initialData?.celular ?? "",
-    direccion: initialData?.direccion ?? initialData?.domicilio ?? "",
-    dni: initialData?.dni ?? initialData?.documento ?? "",
-    id_zona: initialData?.id_zona ?? "", 
-
+      nombre: initialData?.nombre ?? "",
+      apellido: initialData?.apellido ?? "",
+      email: initialData?.email ?? initialData?.mail ?? "",
+      telefono: initialData?.telefono ?? initialData?.celular ?? "",
+      estado: initialData?.estado ?? "",
+      ciudad: initialData?.ciudad ?? "",
+      calle: initialData?.calle ?? initialData?.direccion_calle ?? initialData?.direccion?.calle ?? "",
+      numero: (initialData?.numero ?? initialData?.direccion_numero ?? initialData?.direccion?.numero ?? "").toString(),
+      piso: (initialData?.piso ?? "").toString(),
+      departamento: (initialData?.departamento ?? "").toString(),
+      dni: initialData?.dni ?? initialData?.documento ?? "",
     };
-    // recortamos a MAX por si viniera largo
+
+    // recortes a MAX
     Object.keys(next).forEach((k) => {
-    if (typeof next[k] === "string") next[k] = next[k].slice(0, MAX);
+      if (typeof next[k] === "string") next[k] = next[k].slice(0, MAX);
     });
+
     setValues(next);
-    setErrors({ nombre: "", apellido: "", email: "", telefono: "", direccion: "", id_zona: "" });
+    setErrors({
+      nombre: "",
+      apellido: "",
+      email: "",
+      telefono: "",
+      estado: "",
+      ciudad: "",
+      calle: "",
+      numero: "",
+    });
     setFormError("");
-}
-}, [opened, initialData]);
+  }, [opened, initialData]);
 
-const validateField = (key, val) => {
-  if (key === "zonas") {
-    // Si es un array y tiene al menos un elemento, es válido. Si no, devuelve el error.
-    return Array.isArray(val) && val.length > 0
-      ? ""
-      : "Debe seleccionar al menos una zona.";
-  }
+  const validateField = (key, rawVal) => {
+    const val = (rawVal ?? "").toString().trim();
 
-  // Para TODOS los demás campos (que sí son de texto), aplicamos .trim()
-  const v = (val ?? "").trim();
+    // requeridos
+    if (key === "nombre") return val ? "" : "El nombre es obligatorio.";
+    if (key === "apellido") return val ? "" : "El apellido es obligatorio.";
 
-  // A partir de aquí, el resto de las validaciones para campos de texto.
-  if (key === "nombre") return v ? "" : "El nombre es obligatorio.";
-  if (key === "apellido") return v ? "" : "El apellido es obligatorio.";
-  if (key === "direccion") return v ? "" : "La dirección es obligatoria.";
-  if (key === "telefono") {
-    if (!v) return "El teléfono es obligatorio.";
-    if (!/^\d+$/.test(v)) return "El teléfono debe tener solo números.";
+    if (key === "email") {
+      if (!val) return "El email es obligatorio.";
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ? "" : "Ingresá un e-mail válido.";
+    }
+
+    if (key === "telefono") {
+      if (!val) return "El teléfono es obligatorio.";
+      if (!/^\d+$/.test(val)) return "El teléfono debe tener solo números.";
+      return "";
+    }
+
+    if (key === "estado") return val ? "" : "El estado/provincia es obligatorio.";
+    if (key === "ciudad") return val ? "" : "La ciudad es obligatoria.";
+    if (key === "calle") return val ? "" : "La calle es obligatoria.";
+
+    // numero: opcional, pero si está, solo dígitos
+    if (key === "numero") {
+      if (!val) return "";
+      return /^\d+$/.test(val) ? "" : "El número debe ser numérico (o dejar vacío).";
+    }
+
+    // zonas (array) validación desde el submit
+    if (key === "zonas") {
+      return Array.isArray(rawVal) && rawVal.length > 0
+        ? ""
+        : "Debe seleccionar al menos una zona.";
+    }
+
     return "";
-  }
-  if (key === "email") {
-    if (!v) return "El email es obligatorio.";
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "Ingresá un e-mail válido.";
-  }
-  
-  return ""; // Si el campo no tiene regla de validación, es válido.
-};
-
-// REEMPLAZA TU FUNCIÓN validateAll POR ESTA:
-const validateAll = (data = values) => {
-  const nextErrors = {
-    nombre: validateField("nombre", data.nombre),
-    apellido: validateField("apellido", data.apellido),
-    email: validateField("email", data.email),
-    telefono: validateField("telefono", data.telefono),
-    direccion: validateField("direccion", data.direccion),
-    
-    // --- LA CORRECCIÓN CLAVE ESTÁ AQUÍ ---
-    // Le decimos que para validar las 'zonas', debe usar el estado 'zonasSeleccionadasIds'
-    zonas: validateField("zonas", zonasSeleccionadasIds), 
   };
 
-  const isValid = Object.values(nextErrors).every((e) => !e);
-  setErrors(nextErrors);
-  setFormError(isValid ? "" : "Revisá los campos marcados.");
-  return isValid;
-};
+  const validateAll = (data = values) => {
+    const nextErrors = {
+      nombre: validateField("nombre", data.nombre),
+      apellido: validateField("apellido", data.apellido),
+      email: validateField("email", data.email),
+      telefono: validateField("telefono", data.telefono),
+      estado: validateField("estado", data.estado),
+      ciudad: validateField("ciudad", data.ciudad),
+      calle: validateField("calle", data.calle),
+      numero: validateField("numero", data.numero)
+    };
+    const zonasErr = validateField("zonas", zonasSeleccionadasIds);
 
-const handleChange = (field) => (e) => {
-let val = e?.currentTarget?.value ?? "";
+    const isValid =
+      Object.values(nextErrors).every((e) => !e) && !zonasErr;
 
-// Sanitizar + límite de caracteres
-if (field === "telefono") {
-    val = val.replace(/\D+/g, ""); // solo números
-}
-if (typeof val === "string") val = val.slice(0, MAX);
-
-setValues((prev) => ({ ...prev, [field]: val }));
-// validación instantánea del campo
-if (field in errors) {
-    setErrors((prev) => ({ ...prev, [field]: validateField(field, val) }));
-}
-};
-
-
-const handleSubmit = async () => {
-  if (!validateAll()) return;
-
-  const payload = {
-    nombre: values.nombre.trim(),
-    apellido: values.apellido.trim(),
-    email: values.email.trim(),
-    telefono: values.telefono.trim(),
-    direccion: values.direccion.trim(),
-    zonas: zonasSeleccionadasIds.map(id => parseInt(id, 10)),
+    setErrors(nextErrors);
+    setFormError(isValid ? "" : zonasErr || "Revisá los campos marcados.");
+    return isValid;
   };
 
-  await onSave?.(payload);
-};
+  const handleChange = (field) => (e) => {
+    let val = e?.currentTarget?.value ?? "";
 
-return (
-<Modal
-    opened={opened}
-    onClose={onCancel}
-    centered
-    radius="lg"
-    title={<Text fw={800} fz="xl">Editar prestador</Text>}
-    withCloseButton={!loading}
-    closeOnClickOutside={!loading}
-    closeOnEscape={!loading}
->
-    <Stack gap="sm">
-    {formError && (
-        <Alert color="red" variant="light" mb="xs">
-        {formError}
-        </Alert>
-    )}
+    if (field === "telefono" || field === "numero") {
+      val = val.replace(/[^\d]/g, "");
+    }
 
-<Grid>
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <TextInput
-      label="Nombre"
-      withAsterisk
-      value={values.nombre}
-      onChange={handleChange("nombre")}
-      error={errors.nombre}
-      disabled={loading}
-      maxLength={MAX}
-    />
-  </Grid.Col>
+    if (typeof val === "string") val = val.slice(0, MAX);
 
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <TextInput
-      label="Apellido"
-      withAsterisk
-      value={values.apellido}
-      onChange={handleChange("apellido")}
-      error={errors.apellido}
-      disabled={loading}
-      maxLength={MAX}
-    />
-  </Grid.Col>
+    setValues((prev) => ({ ...prev, [field]: val }));
+    if (field in errors) {
+      setErrors((prev) => ({ ...prev, [field]: validateField(field, val) }));
+    }
+  };
 
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <TextInput
-      label="Email"
-      withAsterisk
-      type="email"
-      value={values.email}
-      onChange={handleChange("email")}
-      error={errors.email}
-      disabled={loading}
-      maxLength={MAX}
-    />
-  </Grid.Col>
+  const handleSubmit = async () => {
+    if (!validateAll()) return;
 
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <TextInput
-      label="Teléfono"
-      withAsterisk
-      value={values.telefono}
-      onChange={handleChange("telefono")}
-      error={errors.telefono}
-      disabled={loading}
-      maxLength={MAX}
-      inputMode="numeric"
-    />
-  </Grid.Col>
+    const payload = {
+      nombre: values.nombre.trim(),
+      apellido: values.apellido.trim(),
+      email: values.email.trim(),
+      telefono: values.telefono.trim(),
+      estado: values.estado.trim(),
+      ciudad: values.ciudad.trim(),
+      calle: values.calle.trim(),
+      numero: values.numero.trim(), // puede ir vacio
+      piso: values.piso.trim(), // opcional
+      departamento: values.departamento.trim(), // opcional
+      zonas: zonasSeleccionadasIds.map((id) => parseInt(id, 10)),
+    };
 
-  <Grid.Col span={12}>
-    <TextInput
-      label="Dirección"
-      withAsterisk
-      value={values.direccion}
-      onChange={handleChange("direccion")}
-      error={errors.direccion}
-      disabled={loading}
-      maxLength={MAX}
-    />
-  </Grid.Col>
+    await onSave?.(payload);
+  };
 
-  <Grid.Col span={{ base: 12, sm: 6 }}>
-    <TextInput
-      label="DNI"
-      value={values.dni}
-      disabled // 🔒 NO editable
-      maxLength={MAX}
-    />
-  </Grid.Col>
+  return (
+    <Modal
+      opened={opened}
+      onClose={onCancel}
+      centered
+      radius="lg"
+      title={<Text fw={800} fz="xl">Editar prestador</Text>}
+      withCloseButton={!loading}
+      closeOnClickOutside={!loading}
+      closeOnEscape={!loading}
+    >
+      <Stack gap="sm">
+        {formError && (
+          <Alert color="red" variant="light" mb="xs">
+            {formError}
+          </Alert>
+        )}
 
-<Grid.Col span={12}>
-  <MultiSelect
-    label="Zonas de trabajo"
-    placeholder="Seleccione una o más zonas"
-    data={zonasDisponibles}
-    value={zonasSeleccionadasIds}
-    onChange={setZonasSeleccionadasIds}
-    searchable
-    clearable
-    disabled={loading}
-  />
-</Grid.Col>
-</Grid>
+        <Grid>
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Nombre"
+              withAsterisk
+              value={values.nombre}
+              onChange={handleChange("nombre")}
+              error={errors.nombre}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
 
-    <Group justify="space-between" mt="md">
-        <Button variant="outline" onClick={onOpenPassword} disabled={loading}>
-        Cambiar contraseña
-        </Button>
-        <Group>
-        <Button variant="light" onClick={onCancel} disabled={loading} color="#a07353ff">
-            Cancelar
-        </Button>
-        <Button onClick={handleSubmit} loading={loading} color="#93755E">
-            Guardar
-        </Button>
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Apellido"
+              withAsterisk
+              value={values.apellido}
+              onChange={handleChange("apellido")}
+              error={errors.apellido}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Email"
+              withAsterisk
+              type="email"
+              value={values.email}
+              onChange={handleChange("email")}
+              error={errors.email}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Teléfono"
+              withAsterisk
+              value={values.telefono}
+              onChange={handleChange("telefono")}
+              error={errors.telefono}
+              disabled={loading}
+              maxLength={MAX}
+              inputMode="numeric"
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Estado / Provincia"
+              withAsterisk
+              value={values.estado}
+              onChange={handleChange("estado")}
+              error={errors.estado}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Ciudad"
+              withAsterisk
+              value={values.ciudad}
+              onChange={handleChange("ciudad")}
+              error={errors.ciudad}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 8 }}>
+            <TextInput
+              label="Calle"
+              withAsterisk
+              value={values.calle}
+              onChange={handleChange("calle")}
+              error={errors.calle}
+              disabled={loading}
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <TextInput
+              label="Número (opcional)"
+              value={values.numero}
+              onChange={handleChange("numero")}
+              error={errors.numero}
+              disabled={loading}
+              maxLength={MAX}
+              inputMode="numeric"
+              placeholder="Ej: 213"
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Piso (opcional)"
+              value={values.piso}
+              onChange={handleChange("piso")}
+              disabled={loading}
+              maxLength={MAX}
+              placeholder="Ej: 3"
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="Departamento (opcional)"
+              value={values.departamento}
+              onChange={handleChange("departamento")}
+              disabled={loading}
+              maxLength={MAX}
+              placeholder="Ej: B"
+            />
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, sm: 6 }}>
+            <TextInput
+              label="DNI"
+              value={values.dni}
+              disabled
+              maxLength={MAX}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={12}>
+            <MultiSelect
+              label="Zonas de trabajo"
+              placeholder="Seleccione una o más zonas"
+              data={zonasDisponibles}
+              value={zonasSeleccionadasIds}
+              onChange={setZonasSeleccionadasIds}
+              searchable
+              clearable
+              disabled={loading}
+            />
+          </Grid.Col>
+        </Grid>
+
+        <Group justify="space-between" mt="md">
+          <Button variant="outline" onClick={onOpenPassword} disabled={loading}>
+            Cambiar contraseña
+          </Button>
+          <Group>
+            <Button variant="light" onClick={onCancel} disabled={loading} color="#a07353ff">
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} loading={loading} color="#93755E">
+              Guardar
+            </Button>
+          </Group>
         </Group>
-    </Group>
-    </Stack>
-</Modal>
-);
+      </Stack>
+    </Modal>
+  );
 }

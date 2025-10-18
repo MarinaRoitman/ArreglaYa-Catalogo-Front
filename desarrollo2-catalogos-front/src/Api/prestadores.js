@@ -76,13 +76,26 @@ return res.json();
 
 // Eliminar zona de prestador
 export async function removeZonaFromPrestador(id, id_zona) {
-const res = await fetch(`${API_URL}prestadores/${id}/zonas`, {
-method: "DELETE",
-headers: getAuthHeaders(),
-body: JSON.stringify({ id_zona }),
-});
-if (!res.ok) throw new Error("Error al eliminar zona");
-return res.json();
+  const res = await fetch(`${API_URL}prestadores/${id}/zonas`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ id_zona }),
+  });
+  if (!res.ok) {
+    let message = "Error al eliminar zona";
+    try {
+      const data = await res.json();
+      if (data.detail) {
+        message = data.detail;
+        console.error("Backend detail:", data.detail);
+      }
+    } catch (e) {
+      const text = await res.text();
+      console.error("Error delete zona (texto):", text);
+    }
+    throw new Error(message);
+  }
+  return res.json();
 }
 
 // Asociar habilidad a prestador

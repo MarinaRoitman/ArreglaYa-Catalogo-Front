@@ -33,6 +33,14 @@ const parseCustomDate = (dateString) => {
   return isNaN(d) ? null : d;
 };
 
+const formatDireccionPrimaria = (u = {}) => {
+  const calle = u?.calle_pri?.trim();
+  const numero = u?.numero_pri?.trim();
+  if (calle && numero) return `${calle} ${numero}`;
+  if (calle) return calle;
+  return "Sin dirección";
+};
+
 function App() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,8 +77,19 @@ function App() {
 
       // 3) Mapear filas seguras para la UI
       const mappedData = (pedidosData || []).map(job => {
+        
         const usuario = usersMap[job?.id_usuario] || {};
         const habilidad = (habilidadesData || []).find(h => h?.id === job?.id_habilidad) || {};
+
+        const criticoInt = Number(
+        job?.critico ??
+        job?.es_critico ??
+        job?.critico_pedido ??
+        job?.pedido_critico ??
+        job?.criticoFlag ??
+        job?.flag_critico ??
+        0
+      );
 
         let fechaHoraFmt = 'Fecha a convenir';
         if (job?.fecha) {
@@ -78,15 +97,17 @@ function App() {
           if (!Number.isNaN(d.getTime())) {
             fechaHoraFmt = d
               .toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
-              .replace(',', '') + 'hs';
+              .replace(',', '');
           }
         }
 
+
+        
         return {
           id: job?.id ?? `tmp-${Math.random().toString(36).slice(2)}`,
           nombre: `${usuario?.nombre || 'Usuario'} ${usuario?.apellido || ''}`.trim(),
           telefono: usuario?.telefono || 'N/A',
-          direccion: usuario?.direccion || 'No especificada',
+          direccion: formatDireccionPrimaria(usuario),
           fecha: job?.fecha ?? null,
           fechaHora: fechaHoraFmt,
           servicio: job?.descripcion ?? '',
@@ -95,6 +116,7 @@ function App() {
           montoTotal: job?.tarifa ?? 0,
           clienteConfirmo:
             job?.estado === 'aprobado_por_usuario' || job?.estado === 'finalizado',
+        critico: criticoInt === 1 ? 1 : 0,
         };
       });
 
