@@ -11,7 +11,7 @@ import {
   Center,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-
+import { listAdmins } from '../Api/admins'; 
 const BASE_URL = "https://api.desarrollo2-catalogos.online";
 const HARD_RELOAD_AFTER_LOGIN = false;
 
@@ -31,11 +31,9 @@ function parseJwt(token) {
 
 function extractAuthFromToken(token) {
   const data = parseJwt(token) || {};
-  // rol
   const roleRaw = data.role ?? data.rol ?? data.r ?? "";
   const role = String(roleRaw || "").toLowerCase().trim();
 
-  // email (si sub es email, usarlo; si no, usar email/correo/mail)
   const sub = data.sub != null ? String(data.sub) : "";
   const emailFromSub = EMAIL_RE.test(sub) ? sub : null;
   const email =
@@ -45,14 +43,12 @@ function extractAuthFromToken(token) {
     data.mail ||
     null;
 
-  // id: preferimos id/user_id/admin_id; si no, sub cuando no es email
   const rawId = data.id ?? data.user_id ?? data.admin_id ?? (emailFromSub ? null : sub) ?? null;
   const id =
     rawId && (UUID_RE.test(String(rawId)) || /^\d+$/.test(String(rawId)))
       ? String(rawId)
       : null;
 
-  // nombre visible (si lo trae el token)
   const name =
     data.name ||
     data.nombre ||
@@ -78,7 +74,6 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 0) Login
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -93,46 +88,79 @@ export default function LoginPage() {
 
       if (!res.ok) throw new Error("Credenciales inválidas");
 
+      
       const data = await res.json();
       const token = data?.access_token || data?.token;
       if (!token) throw new Error("No se recibió token");
 
-      // 1) Guardar token
       localStorage.setItem("token", token);
 
-      // 2) Extraer identidad desde el token y normalizar almacenamiento
       const { role, id, name } = extractAuthFromToken(token);
+      const email = extractAuthFromToken(token).email;
       localStorage.setItem("role", role);
       
-      // Limpiar llaves que generan confusión
       localStorage.removeItem("id_admin");
       localStorage.removeItem("admin_id");
 
-      if (role === "admin") {
-        // Admin: nunca usar prestador_id
-        localStorage.removeItem("prestador_id");
+    if (role === "admin") {
+      console.log("--- DEBUG: Flujo de Admin detectado.");
+      localStorage.removeItem("prestador_id");
+      console.log("--- DEBUG: Buscando por email:", email);
 
-        // Guardamos id SOLO si vino un id válido en el token
-        if (id) {
-          localStorage.setItem("id", id);
-        } else {
-          // si no hay id, dejamos que la pantalla de perfil lo resuelva por email
+      if (email) {
+        try {
+          console.log(`--- DEBUG: Llamando a listAdmins() para encontrar email: ${email}...`);
+          const allAdmins = await listAdmins(); 
+          
+          const adminDetails = Array.isArray(allAdmins)
+            ? allAdmins.find((a) => (a?.email || "").toLowerCase().trim() === email.toLowerCase().trim())
+            : null;
+
+          console.log("--- DEBUG: Admin encontrado:", adminDetails);
+
+          if (adminDetails) {
+            const adminName = `${adminDetails?.nombre || ''} ${adminDetails?.apellido || ''}`.trim() || name || 'Admin';
+            const adminFoto = adminDetails?.foto || adminDetails?.foto_url || '';
+            const adminId = adminDetails?.id || adminDetails?.id_admin || null; 
+            localStorage.setItem("userName", adminName);
+            localStorage.setItem("userFoto", adminFoto);
+            
+            if (adminId) {
+              localStorage.setItem("id", String(adminId)); 
+            } else {
+              localStorage.removeItem("id"); 
+            }
+            
+            console.log("--- DEBUG: ¡Éxito! localStorage actualizado con:", { userName: adminName, userFoto: adminFoto, id: adminId });
+          } else {
+            console.warn("--- DEBUG: El email del token no se encontró en listAdmins(). Usando defaults.");
+            localStorage.setItem("userName", name || "Admin");
+            localStorage.removeItem("userFoto");
+            localStorage.removeItem("id");
+          }
+
+        } catch (error) {
+          console.error("--- DEBUG: ERROR al llamar a listAdmins() ---", error);
+          localStorage.setItem("userName", name || "Admin");
+          localStorage.removeItem("userFoto");
           localStorage.removeItem("id");
         }
-
-        // Nombre visible
-        localStorage.setItem("userName", name || "Admin");
       } else {
-        // Prestador (u otros roles no admin)
-        // No guardes 'id' de admin; en su lugar, si sub/id es numérico/uuid y sirve para prestador, podés guardarlo como prestador_id
+        console.warn("--- DEBUG: Admin logueado SIN EMAIL en el token. Usando defaults.");
+        localStorage.removeItem("id");
+        localStorage.setItem("userName", name || "Admin");
+        localStorage.removeItem("userFoto");
+      }
+
+
+      } else {
         if (id) {
           localStorage.setItem("prestador_id", id);
         } else {
           localStorage.removeItem("prestador_id");
         }
-        localStorage.removeItem("id"); // por si venías de una sesión admin
+        localStorage.removeItem("id"); 
 
-        // Intentar traer nombre del prestador
         if (id) {
           try {
             const prestadorRes = await fetch(`${BASE_URL}/prestadores/${id}`, {
@@ -141,8 +169,7 @@ export default function LoginPage() {
             if (prestadorRes.ok) {
               const prestador = await prestadorRes.json();
               localStorage.setItem("userName", prestador?.nombre || name || "Usuario");
-              localStorage.setItem("userFoto", prestador?.foto || ""); // Guardamos la URL de la foto
-            } else {
+              localStorage.setItem("userFoto", prestador?.foto || ""); 
               localStorage.setItem("userName", name || "Usuario");
             }
           } catch {
@@ -153,7 +180,6 @@ export default function LoginPage() {
         }
       }
 
-      // 3) Señalizar cambio de auth y navegar
       setIsRefreshing(true);
 
       if (HARD_RELOAD_AFTER_LOGIN) {
