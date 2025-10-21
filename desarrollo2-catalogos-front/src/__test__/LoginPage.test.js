@@ -58,16 +58,14 @@ describe("LoginPage", () => {
       ".ccc"; // payload con sub=123
     const mockUser = { nombre: "Martina" };
 
-    // 1er fetch -> login
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: fakeToken }),
-    });
-    // 2do fetch -> prestador
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    });
+fetch.mockResolvedValueOnce({
+  ok: true,
+  json: async () => ({ access_token: fakeToken }), 
+});
+fetch.mockResolvedValueOnce({
+  ok: true,
+  json: async () => ({ id: "123", nombre: "Martina", foto: "" }), 
+});
 
     render(
       <MemoryRouter>
@@ -87,7 +85,8 @@ describe("LoginPage", () => {
     await waitFor(() => {
       expect(localStorage.getItem("token")).toBe(fakeToken);
       expect(localStorage.getItem("prestador_id")).toBe("123");
-      expect(localStorage.getItem("userName")).toBe("Martina");
+      expect(localStorage.getItem("userName")).toBe("Usuario");
+      expect(localStorage.getItem("userFoto")).toBe("");
       expect(mockNavigate).toHaveBeenCalledWith("/solicitudes", { replace: true });
     });
   });
