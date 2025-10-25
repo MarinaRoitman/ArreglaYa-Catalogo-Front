@@ -36,6 +36,7 @@ jobs:
 
       - name: Build (DEV)
         env:
+          # CRA reads REACT_APP_* at build time
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
           npm run build
@@ -47,11 +48,16 @@ jobs:
             echo "No dist/ or build/ directory found" && exit 1
           fi
 
-      # 🔍 Verifica que el bundle tenga la URL correcta embebida
+      # Verify the baked API URL (scan .js only, avoid .map noise)
       - name: Verify API URL baked in bundle
         run: |
           echo "BUILD_DIR=${{ env.BUILD_DIR }}"
-          grep -R --line-number "desarrollo2-catalogos" "${{ env.BUILD_DIR }}" || true
+          echo "---- Buscar referencias en archivos .js ----"
+          grep -R --line-number --include='*.js' 'desarrollo2-catalogos' "${{ env.BUILD_DIR }}" || true
+          echo "---- ¿Hay apidev? (OK si aparece) ----"
+          grep -R --line-number --include='*.js' 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" || true
+          echo "---- ¿Hay api prod? (NO debería aparecer en dev) ----"
+          grep -R --line-number --include='*.js' 'https://api.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" || true
 
       - name: Debug secrets (masked)
         shell: bash
