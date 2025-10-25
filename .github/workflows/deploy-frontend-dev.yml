@@ -48,7 +48,7 @@ jobs:
       - name: Build
         env:
           # Cambiá el nombre de la var si tu front usa REACT_APP_* / NEXT_PUBLIC_* / etc.
-          VITE_API_URL: "https://apidev.desarrollo2-catalogos.online"
+          REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
           npm run build
           if [ -d "dist" ]; then
