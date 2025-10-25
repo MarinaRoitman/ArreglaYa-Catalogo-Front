@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "dev" ]
     paths:
-      - 'desarrollo2-catalogos-front/**'
+      - "desarrollo2-catalogos-front/**"
   workflow_dispatch: {}
 
 concurrency:
@@ -34,44 +34,39 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      - name: Debug React environment variables
-        run: |
-          echo "🔎 REACT_APP_* variables disponibles:"
-          printenv | grep '^REACT_APP_' || echo "⚠️ No REACT_APP_* vars found"
-
+      # Vars de build para CRA (se leen en build-time)
       - name: Build (DEV)
         env:
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
+          set -euo pipefail
           echo "🔧 REACT_APP_API_URL=$REACT_APP_API_URL"
           npm run build
           if [ -d "dist" ]; then
-            echo "BUILD_DIR=dist" >> $GITHUB_ENV
+            echo "BUILD_DIR=dist" >> "$GITHUB_ENV"
           elif [ -d "build" ]; then
-            echo "BUILD_DIR=build" >> $GITHUB_ENV
+            echo "BUILD_DIR=build" >> "$GITHUB_ENV"
           else
-            echo "No dist/ or build/ directory found" && exit 1
+            echo "❌ No dist/ or build/ directory found"; exit 1
           fi
+          echo "✅ Build listo en $BUILD_DIR"
 
-      - name: Verify API URL baked in bundle
+      - name: Quick check: API URL baked into bundle
         run: |
+          set -euo pipefail
           echo "BUILD_DIR=${{ env.BUILD_DIR }}"
-          echo "¿apidev está en el bundle? (OK si aparece)"
-          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 5 || echo "⚠️ No dev URL found"
-          echo "¿api prod aparece? (NO debería aparecer)"
-          grep -R --include='*.js' -n 'https://api.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 5 || true
+          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 3 || echo "⚠️ No se detectó la URL dev en los JS (puede estar ofuscada)"
 
-      # ⚠️ Mejor evitar imprimir secretos en logs
-      # - name: Debug secrets (masked) ...
+      # ——— Deploy al EC2 ———
 
-      - name: Ensure target dir (DEV)
+      - name: Ensure target dir on EC2 (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -e
+            set -euo pipefail
             sudo mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
             sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
 
@@ -88,29 +83,51 @@ jobs:
           rm: true
           timeout: 2m
 
-      - name: Restart Caddy (DEV)
+      - name: Bring up Caddy (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -e
-            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml restart caddy
-            for i in {1..15}; do
-              sudo docker ps --filter "name=caddy" --format '{{.Names}}' | grep -q '^caddy$' && break
+            set -euo pipefail
+            cd /home/ubuntu/catalogo
+            # Levanta (o recrea) solo caddy usando el .env del server
+            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml up -d caddy
+
+            # Espera a que quede running
+            for i in {1..20}; do
+              state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
+              [ "$state" = "true" ] && break
               sleep 1
             done
 
-      - name: Verify files in caddy (DEV)
+            echo "Estado de servicios:"
+            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml ps
+
+      - name: Verify files and serve path in container (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -e
+            set -euo pipefail
             echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
             ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
-            echo "== /srv/frontend-dev inside caddy =="
-            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
+
+            cd /home/ubuntu/catalogo
+            if ! sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null | grep -q true; then
+              echo "❌ caddy no está corriendo"
+              sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml ps || true
+              echo "Logs de caddy:"
+              sudo docker logs --tail 200 caddy || true
+              exit 1
+            fi
+
+            echo "== /srv/frontend-dev dentro de caddy =="
+            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
+
+            echo "== Healthcheck simple (HTTP) =="
+            # Si tenés HTTPS obligatorio o dominio con TLS, podés cambiarlo por curl -Iks https://apidev.desarrollo2-catalogos.online
+            sudo docker compose -f docker-compose.yml exec -T caddy sh -lc 'apk add --no-cache curl >/dev/null 2>&1 || true; curl -I -s http://localhost | head -n 5 || true'
