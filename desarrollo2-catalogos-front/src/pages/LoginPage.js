@@ -11,8 +11,9 @@ import {
   Center,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
+import { API_URL } from "..Api/api";
 
-const BASE_URL = "https://api.desarrollo2-catalogos.online";
+const BASE_URL = API_URL;
 // Cambiá a true si querés volver al modo "recargar toda la app" después del login
 const HARD_RELOAD_AFTER_LOGIN = false;
 
