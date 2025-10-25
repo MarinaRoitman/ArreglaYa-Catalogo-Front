@@ -34,7 +34,6 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      # --- Verificación simple de envs visibles para CRA ---
       - name: Debug React environment variables
         run: |
           echo "🔎 REACT_APP_* variables disponibles:"
@@ -42,7 +41,6 @@ jobs:
 
       - name: Build (DEV)
         env:
-          # CRA lee REACT_APP_* en build time
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
           echo "🔧 REACT_APP_API_URL=$REACT_APP_API_URL"
@@ -55,7 +53,6 @@ jobs:
             echo "No dist/ or build/ directory found" && exit 1
           fi
 
-      # --- Chequeo corto post-build (sin maps, máx 5 líneas) ---
       - name: Verify API URL baked in bundle
         run: |
           echo "BUILD_DIR=${{ env.BUILD_DIR }}"
@@ -64,18 +61,8 @@ jobs:
           echo "¿api prod aparece? (NO debería aparecer)"
           grep -R --include='*.js' -n 'https://api.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 5 || true
 
-      - name: Debug secrets (masked)
-        shell: bash
-        working-directory: .
-        run: |
-          set -e
-          echo "EC2_HOST: ${{ secrets.EC2_HOST }}"
-          echo "EC2_USER: ${{ secrets.EC2_USER }}"
-          test -n "${{ secrets.EC2_SSH_PASSWORD }}" || { echo "ERROR: Missing secret EC2_SSH_PASSWORD" >&2; exit 1; }
-          LEN=$(printf "%s" "${{ secrets.EC2_SSH_PASSWORD }}" | wc -c | tr -d ' ')
-          HASH=$(printf "%s" "${{ secrets.EC2_SSH_PASSWORD }}" | sha256sum | cut -c1-12)
-          echo "EC2_SSH_PASSWORD length: ${LEN}"
-          echo "EC2_SSH_PASSWORD sha256 (first 12): ${HASH}"
+      # ⚠️ Mejor evitar imprimir secretos en logs
+      # - name: Debug secrets (masked) ...
 
       - name: Ensure target dir (DEV)
         uses: appleboy/ssh-action@v1.2.0
@@ -83,10 +70,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-        script: |
-          set -e
-          mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
-          sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
+          script: |
+            set -e
+            sudo mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
+            sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
 
       - name: Copy static assets to EC2 (DEV)
         uses: appleboy/scp-action@v0.1.7
@@ -107,13 +94,13 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-        script: |
-          set -e
-          sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml restart caddy
-          for i in {1..15}; do
-            sudo docker ps --filter "name=caddy" --format '{{.Names}}' | grep -q '^caddy$' && break
-            sleep 1
-          done
+          script: |
+            set -e
+            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml restart caddy
+            for i in {1..15}; do
+              sudo docker ps --filter "name=caddy" --format '{{.Names}}' | grep -q '^caddy$' && break
+              sleep 1
+            done
 
       - name: Verify files in caddy (DEV)
         uses: appleboy/ssh-action@v1.2.0
@@ -121,9 +108,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-        script: |
-          set -e
-          echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
-          ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
-          echo "== /srv/frontend-dev inside caddy =="
-          sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
+          script: |
+            set -e
+            echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
+            ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
+            echo "== /srv/frontend-dev inside caddy =="
+            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
