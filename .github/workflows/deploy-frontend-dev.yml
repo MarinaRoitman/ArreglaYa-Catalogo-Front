@@ -34,11 +34,18 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
+      # --- Verificación simple de envs visibles para CRA ---
+      - name: Debug React environment variables
+        run: |
+          echo "🔎 REACT_APP_* variables disponibles:"
+          printenv | grep '^REACT_APP_' || echo "⚠️ No REACT_APP_* vars found"
+
       - name: Build (DEV)
         env:
-          # CRA reads REACT_APP_* at build time
+          # CRA lee REACT_APP_* en build time
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
+          echo "🔧 REACT_APP_API_URL=$REACT_APP_API_URL"
           npm run build
           if [ -d "dist" ]; then
             echo "BUILD_DIR=dist" >> $GITHUB_ENV
@@ -48,16 +55,14 @@ jobs:
             echo "No dist/ or build/ directory found" && exit 1
           fi
 
-      # Verify the baked API URL (scan .js only, avoid .map noise)
+      # --- Chequeo corto post-build (sin maps, máx 5 líneas) ---
       - name: Verify API URL baked in bundle
         run: |
           echo "BUILD_DIR=${{ env.BUILD_DIR }}"
-          echo "---- Buscar referencias en archivos .js ----"
-          grep -R --line-number --include='*.js' 'desarrollo2-catalogos' "${{ env.BUILD_DIR }}" || true
-          echo "---- ¿Hay apidev? (OK si aparece) ----"
-          grep -R --line-number --include='*.js' 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" || true
-          echo "---- ¿Hay api prod? (NO debería aparecer en dev) ----"
-          grep -R --line-number --include='*.js' 'https://api.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" || true
+          echo "¿apidev está en el bundle? (OK si aparece)"
+          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 5 || echo "⚠️ No dev URL found"
+          echo "¿api prod aparece? (NO debería aparecer)"
+          grep -R --include='*.js' -n 'https://api.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 5 || true
 
       - name: Debug secrets (masked)
         shell: bash
@@ -78,10 +83,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-          script: |
-            set -e
-            mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
-            sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
+        script: |
+          set -e
+          mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
+          sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
 
       - name: Copy static assets to EC2 (DEV)
         uses: appleboy/scp-action@v0.1.7
@@ -102,13 +107,13 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-          script: |
-            set -e
-            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml restart caddy
-            for i in {1..15}; do
-              sudo docker ps --filter "name=caddy" --format '{{.Names}}' | grep -q '^caddy$' && break
-              sleep 1
-            done
+        script: |
+          set -e
+          sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml restart caddy
+          for i in {1..15}; do
+            sudo docker ps --filter "name=caddy" --format '{{.Names}}' | grep -q '^caddy$' && break
+            sleep 1
+          done
 
       - name: Verify files in caddy (DEV)
         uses: appleboy/ssh-action@v1.2.0
@@ -116,9 +121,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-          script: |
-            set -e
-            echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
-            ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
-            echo "== /srv/frontend-dev inside caddy =="
-            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
+        script: |
+          set -e
+          echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
+          ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
+          echo "== /srv/frontend-dev inside caddy =="
+          sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
