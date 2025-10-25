@@ -2,9 +2,10 @@ name: Deploy Frontend to EC2 (dev)
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "dev", "main" ]   # <- agrega main si querés que dispare ahí también
     paths:
       - "desarrollo2-catalogos-front/**"
+      - ".github/workflows/deploy-frontend-dev.yml"   # <- dispará cuando modifiques el workflow
   workflow_dispatch: {}
 
 concurrency:
@@ -34,7 +35,6 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      # Vars de build para CRA (se leen en build-time)
       - name: Build (DEV)
         env:
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
@@ -49,16 +49,14 @@ jobs:
           else
             echo "❌ No dist/ or build/ directory found"; exit 1
           fi
-          echo "✅ Build listo en $BUILD_DIR"
 
       - name: Quick check: API URL baked into bundle
         run: |
           set -euo pipefail
           echo "BUILD_DIR=${{ env.BUILD_DIR }}"
-          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 3 || echo "⚠️ No se detectó la URL dev en los JS (puede estar ofuscada)"
+          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 3 || echo "⚠️ Puede estar ofuscada"
 
-      # ——— Deploy al EC2 ———
-
+      # ===== Deploy a EC2 =====
       - name: Ensure target dir on EC2 (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -92,17 +90,12 @@ jobs:
           script: |
             set -euo pipefail
             cd /home/ubuntu/catalogo
-            # Levanta (o recrea) solo caddy usando el .env del server
             sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml up -d caddy
-
-            # Espera a que quede running
             for i in {1..20}; do
               state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
               [ "$state" = "true" ] && break
               sleep 1
             done
-
-            echo "Estado de servicios:"
             sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml ps
 
       - name: Verify files and serve path in container (DEV)
@@ -127,7 +120,3 @@ jobs:
 
             echo "== /srv/frontend-dev dentro de caddy =="
             sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
-
-            echo "== Healthcheck simple (HTTP) =="
-            # Si tenés HTTPS obligatorio o dominio con TLS, podés cambiarlo por curl -Iks https://apidev.desarrollo2-catalogos.online
-            sudo docker compose -f docker-compose.yml exec -T caddy sh -lc 'apk add --no-cache curl >/dev/null 2>&1 || true; curl -I -s http://localhost | head -n 5 || true'
