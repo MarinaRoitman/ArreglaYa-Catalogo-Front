@@ -2,10 +2,10 @@ name: Deploy Frontend to EC2 (dev)
 
 on:
   push:
-    branches: [ "dev", "main" ]   # <- agrega main si querés que dispare ahí también
+    branches: [ "dev" ]
     paths:
       - "desarrollo2-catalogos-front/**"
-      - ".github/workflows/deploy-frontend-dev.yml"   # <- dispará cuando modifiques el workflow
+      - ".github/workflows/deploy-frontend-dev.yml"
   workflow_dispatch: {}
 
 concurrency:
@@ -39,24 +39,11 @@ jobs:
         env:
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
-          set -euo pipefail
-          echo "🔧 REACT_APP_API_URL=$REACT_APP_API_URL"
           npm run build
-          if [ -d "dist" ]; then
-            echo "BUILD_DIR=dist" >> "$GITHUB_ENV"
-          elif [ -d "build" ]; then
-            echo "BUILD_DIR=build" >> "$GITHUB_ENV"
-          else
-            echo "❌ No dist/ or build/ directory found"; exit 1
-          fi
+          if [ -d "dist" ]; then echo "BUILD_DIR=dist" >> $GITHUB_ENV; \
+          elif [ -d "build" ]; then echo "BUILD_DIR=build" >> $GITHUB_ENV; \
+          else echo "No dist/ or build/ directory found" && exit 1; fi
 
-      - name: Quick check: API URL baked into bundle
-        run: |
-          set -euo pipefail
-          echo "BUILD_DIR=${{ env.BUILD_DIR }}"
-          grep -R --include='*.js' -n 'https://apidev.desarrollo2-catalogos.online' "${{ env.BUILD_DIR }}" | head -n 3 || echo "⚠️ Puede estar ofuscada"
-
-      # ===== Deploy a EC2 =====
       - name: Ensure target dir on EC2 (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -64,7 +51,7 @@ jobs:
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -euo pipefail
+            set -e
             sudo mkdir -p /home/ubuntu/catalogo/frontend-dev/dist
             sudo chown -R ci:ci /home/ubuntu/catalogo/frontend-dev
 
@@ -79,44 +66,25 @@ jobs:
           strip_components: 2
           overwrite: true
           rm: true
-          timeout: 2m
 
-      - name: Bring up Caddy (DEV)
+      - name: Up Caddy (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -euo pipefail
+            set -e
             cd /home/ubuntu/catalogo
             sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml up -d caddy
-            for i in {1..20}; do
-              state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
-              [ "$state" = "true" ] && break
-              sleep 1
-            done
-            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml ps
 
-      - name: Verify files and serve path in container (DEV)
+      - name: Verify (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
           script: |
-            set -euo pipefail
-            echo "== /home/ubuntu/catalogo/frontend-dev/dist =="
-            ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 50
-
-            cd /home/ubuntu/catalogo
-            if ! sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null | grep -q true; then
-              echo "❌ caddy no está corriendo"
-              sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml ps || true
-              echo "Logs de caddy:"
-              sudo docker logs --tail 200 caddy || true
-              exit 1
-            fi
-
-            echo "== /srv/frontend-dev dentro de caddy =="
-            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 50'
+            set -e
+            ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 20
+            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 20'
