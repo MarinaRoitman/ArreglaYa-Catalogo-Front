@@ -40,9 +40,13 @@ jobs:
           REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
         run: |
           npm run build
-          if [ -d "dist" ]; then echo "BUILD_DIR=dist" >> $GITHUB_ENV; \
-          elif [ -d "build" ]; then echo "BUILD_DIR=build" >> $GITHUB_ENV; \
-          else echo "No dist/ or build/ directory found" && exit 1; fi
+          if [ -d "dist" ]; then
+            echo "BUILD_DIR=dist" >> $GITHUB_ENV
+          elif [ -d "build" ]; then
+            echo "BUILD_DIR=build" >> $GITHUB_ENV
+          else
+            echo "❌ No dist/ or build/ directory found" && exit 1
+          fi
 
       - name: Ensure target dir on EC2 (DEV)
         uses: appleboy/ssh-action@v1.2.0
@@ -67,7 +71,7 @@ jobs:
           overwrite: true
           rm: true
 
-      - name: Up Caddy (DEV)
+      - name: Restart and check Caddy (DEV)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -76,15 +80,21 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/catalogo
-            sudo docker compose --env-file /home/ubuntu/catalogo/.env -f docker-compose.yml up -d caddy
+            echo "Restarting caddy..."
+            sudo docker compose restart caddy || sudo docker compose up -d caddy
 
-      - name: Verify (DEV)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ci
-          password: ${{ secrets.EC2_SSH_PASSWORD }}
-          script: |
-            set -e
-            ls -lah /home/ubuntu/catalogo/frontend-dev/dist | head -n 20
-            sudo docker compose -f /home/ubuntu/catalogo/docker-compose.yml exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 20'
+            echo "Waiting for caddy..."
+            for i in {1..15}; do
+              state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
+              [ "$state" = "true" ] && break
+              sleep 1
+            done
+
+            if ! sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null | grep -q true; then
+              echo "❌ Caddy no está corriendo. Logs:"
+              sudo docker logs --tail 50 caddy || true
+              exit 1
+            fi
+
+            echo "✅ Caddy corriendo. Archivos montados:"
+            sudo docker exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 20'
