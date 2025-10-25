@@ -37,7 +37,7 @@ jobs:
 
       - name: Build (DEV)
         env:
-          REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online"
+          REACT_APP_API_URL: "https://apidev.desarrollo2-catalogos.online/"
         run: |
           npm run build
           if [ -d "dist" ]; then echo "BUILD_DIR=dist" >> $GITHUB_ENV; \
