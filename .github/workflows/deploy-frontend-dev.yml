@@ -77,24 +77,25 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ci
           password: ${{ secrets.EC2_SSH_PASSWORD }}
-          script: |
-            set -e
-            cd /home/ubuntu/catalogo
-            echo "Restarting caddy..."
-            sudo docker compose restart caddy || sudo docker compose up -d caddy
+        script: |
+          set -e
+          cd /home/ubuntu/catalogo
+          echo "Restarting caddy..."
+          sudo docker compose restart caddy || sudo docker compose up -d caddy
 
-            echo "Waiting for caddy..."
-            for i in {1..15}; do
-              state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
-              [ "$state" = "true" ] && break
-              sleep 1
-            done
+          echo "Waiting for caddy..."
+          for i in {1..15}; do
+            state=$(sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null || echo "false")
+            [ "$state" = "true" ] && break
+            sleep 1
+          done
 
-            if ! sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null | grep -q true; then
-              echo "❌ Caddy no está corriendo. Logs:"
-              sudo docker logs --tail 50 caddy || true
-              exit 1
-            fi
+          if ! sudo docker inspect -f '{{.State.Running}}' caddy 2>/dev/null | grep -q true; then
+            echo "❌ Caddy no está corriendo. Logs:"
+            sudo docker logs --tail 80 caddy || true
+            exit 1
+          fi
 
-            echo "✅ Caddy corriendo. Archivos montados:"
-            sudo docker exec -T caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 20'
+          echo "✅ Caddy corriendo. Archivos montados:"
+          # sin -T (tu docker no lo soporta)
+          sudo docker exec caddy sh -lc 'ls -lah /srv/frontend-dev | head -n 20'
