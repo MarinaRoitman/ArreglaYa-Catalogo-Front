@@ -11,15 +11,11 @@ import {
   Center,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-import { listAdmins } from '../Api/admins'; 
-const BASE_URL = "https://api.desarrollo2-catalogos.online";
+import { API_URL } from "../Api/api";
+
 const HARD_RELOAD_AFTER_LOGIN = false;
 
 /* ========== Helpers ========== */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function parseJwt(token) {
   try {
     const [, payload] = token.split(".");
@@ -29,34 +25,68 @@ function parseJwt(token) {
   }
 }
 
-function extractAuthFromToken(token) {
-  const data = parseJwt(token) || {};
-  const roleRaw = data.role ?? data.rol ?? data.r ?? "";
-  const role = String(roleRaw || "").toLowerCase().trim();
+async function fetchJson(url, token) {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const err = new Error(txt || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") ? res.json() : {};
+}
 
-  const sub = data.sub != null ? String(data.sub) : "";
-  const emailFromSub = EMAIL_RE.test(sub) ? sub : null;
-  const email =
-    emailFromSub ||
-    data.email ||
-    data.correo ||
-    data.mail ||
-    null;
+async function findAdminByEmail(email, token) {
+  const e = (email || "").trim().toLowerCase();
+  if (!e) return null;
 
-  const rawId = data.id ?? data.user_id ?? data.admin_id ?? (emailFromSub ? null : sub) ?? null;
-  const id =
-    rawId && (UUID_RE.test(String(rawId)) || /^\d+$/.test(String(rawId)))
-      ? String(rawId)
-      : null;
+  // 1) Intento con query param (si el back lo soporta)
+  try {
+    const data = await fetchJson(`${API_URL}admins/?email=${encodeURIComponent(e)}`, token);
+    if (Array.isArray(data)) {
+      return data.find((a) => (a?.email || "").trim().toLowerCase() === e) || null;
+    }
+    if (data && (data.email || "").trim().toLowerCase() === e) return data;
+  } catch { /* fallback */ }
 
-  const name =
-    data.name ||
-    data.nombre ||
-    data.first_name ||
-    data.given_name ||
-    null;
+  // 2) Fallback: listar y filtrar
+  try {
+    const all = await fetchJson(`${API_URL}admins/`, token);
+    if (Array.isArray(all)) {
+      return all.find((a) => (a?.email || "").trim().toLowerCase() === e) || null;
+    }
+  } catch { /* noop */ }
 
-  return { role, email, id, name };
+  return null;
+}
+
+async function findPrestadorByEmail(email, token) {
+  const e = (email || "").trim().toLowerCase();
+  if (!e) return null;
+
+  try {
+    const data = await fetchJson(`${API_URL}prestadores/?email=${encodeURIComponent(e)}`, token);
+    if (Array.isArray(data)) {
+      return data.find((p) => (p?.email || "").trim().toLowerCase() === e) || null;
+    }
+    if (data && (data.email || "").trim().toLowerCase() === e) return data;
+  } catch { /* fallback */ }
+
+  try {
+    const all = await fetchJson(`${API_URL}prestadores/`, token);
+    if (Array.isArray(all)) {
+      return all.find((p) => (p?.email || "").trim().toLowerCase() === e) || null;
+    }
+  } catch { /* noop */ }
+
+  return null;
 }
 
 export default function LoginPage() {
@@ -74,118 +104,86 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BASE_URL}/auth/login`, {
+      // Usamos el email del formulario como "fuente de verdad"
+      const loginEmail = String(formData.usuario || "").trim().toLowerCase();
+      if (!loginEmail) throw new Error("Ingresá tu email.");
+
+      // 0) Login
+      const res = await fetch(`${API_URL}auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({
-          email: formData.usuario,
-          password: formData.contrasena,
-        }),
+        body: JSON.stringify({ email: loginEmail, password: formData.contrasena }),
       });
 
-      if (!res.ok) throw new Error("Credenciales inválidas");
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Credenciales inválidas");
+      }
 
-      
       const data = await res.json();
       const token = data?.access_token || data?.token;
       if (!token) throw new Error("No se recibió token");
 
+      // 1) Guardar token y email canónico de login
       localStorage.setItem("token", token);
+      localStorage.setItem("login_email", loginEmail);
 
-      const { role, id, name } = extractAuthFromToken(token);
-      const email = extractAuthFromToken(token).email;
-      localStorage.setItem("role", role);
-      
+      // 2) Extraer SOLO el rol del token (no IDs, no email)
+      const payload = parseJwt(token) || {};
+      const roleRaw = payload.role ?? payload.rol ?? payload.r ?? "";
+      const role = String(roleRaw || "").toLowerCase().trim();
+      localStorage.setItem("role", role || "");
+
+      // 3) Limpiar llaves confusas SIEMPRE
       localStorage.removeItem("id_admin");
       localStorage.removeItem("admin_id");
-
-    if (role === "admin") {
-      console.log("--- DEBUG: Flujo de Admin detectado.");
+      localStorage.removeItem("id");
       localStorage.removeItem("prestador_id");
-      console.log("--- DEBUG: Buscando por email:", email);
 
-      if (email) {
-        try {
-          console.log(`--- DEBUG: Llamando a listAdmins() para encontrar email: ${email}...`);
-          const allAdmins = await listAdmins(); 
-          
-          const adminDetails = Array.isArray(allAdmins)
-            ? allAdmins.find((a) => (a?.email || "").toLowerCase().trim() === email.toLowerCase().trim())
-            : null;
+      // 4) Resolver perfil por email
+      let userName = "Usuario";
 
-          console.log("--- DEBUG: Admin encontrado:", adminDetails);
+      if (role === "admin") {
+        const admin = await findAdminByEmail(loginEmail, token);
+        if (!admin) throw new Error("No se encontró el administrador por email.");
 
-          if (adminDetails) {
-            const adminName = `${adminDetails?.nombre || ''} ${adminDetails?.apellido || ''}`.trim() || name || 'Admin';
-            const adminFoto = adminDetails?.foto || adminDetails?.foto_url || '';
-            const adminId = adminDetails?.id || adminDetails?.id_admin || null; 
-            localStorage.setItem("userName", adminName);
-            localStorage.setItem("userFoto", adminFoto);
-            
-            if (adminId) {
-              localStorage.setItem("id", String(adminId)); 
-            } else {
-              localStorage.removeItem("id"); 
-            }
-            
-            console.log("--- DEBUG: ¡Éxito! localStorage actualizado con:", { userName: adminName, userFoto: adminFoto, id: adminId });
-          } else {
-            console.warn("--- DEBUG: El email del token no se encontró en listAdmins(). Usando defaults.");
-            localStorage.setItem("userName", name || "Admin");
-            localStorage.removeItem("userFoto");
-            localStorage.removeItem("id");
-          }
-
-        } catch (error) {
-          console.error("--- DEBUG: ERROR al llamar a listAdmins() ---", error);
-          localStorage.setItem("userName", name || "Admin");
-          localStorage.removeItem("userFoto");
-          localStorage.removeItem("id");
+        if (admin.id != null) {
+          localStorage.setItem("id", String(admin.id)); // id correcto de admin
         }
+        userName =
+          admin.nombre ||
+          `${admin.nombre || ""} ${admin.apellido || ""}`.trim() ||
+          "Admin";
+
+        localStorage.removeItem("prestador_id");
       } else {
-        console.warn("--- DEBUG: Admin logueado SIN EMAIL en el token. Usando defaults.");
-        localStorage.removeItem("id");
-        localStorage.setItem("userName", name || "Admin");
-        localStorage.removeItem("userFoto");
+        const prestador = await findPrestadorByEmail(loginEmail, token);
+        if (prestador && prestador.id != null) {
+          localStorage.setItem("prestador_id", String(prestador.id)); // id correcto de prestador
+          userName =
+            prestador.nombre ||
+            `${prestador.nombre || ""} ${prestador.apellido || ""}`.trim() ||
+            "Usuario";
+        } else {
+          userName = "Usuario";
+        }
+        localStorage.removeItem("id"); // no arrastrar id admin
       }
 
+      localStorage.setItem("userName", userName);
 
-      } else {
-        if (id) {
-          localStorage.setItem("prestador_id", id);
-        } else {
-          localStorage.removeItem("prestador_id");
-        }
-        localStorage.removeItem("id"); 
-
-        if (id) {
-          try {
-            const prestadorRes = await fetch(`${BASE_URL}/prestadores/${id}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (prestadorRes.ok) {
-              const prestador = await prestadorRes.json();
-              localStorage.setItem("userName", prestador?.nombre || name || "Usuario");
-              localStorage.setItem("userFoto", prestador?.foto || ""); 
-              localStorage.setItem("userName", name || "Usuario");
-            }
-          } catch {
-            localStorage.setItem("userName", name || "Usuario");
-          }
-        } else {
-          localStorage.setItem("userName", name || "Usuario");
-        }
-      }
-
+      // 5) Señalizar cambio y navegar
       setIsRefreshing(true);
 
+      const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
+      const intended = location.state?.from?.pathname;
+      const nextPath = intended || defaultHome;
+
       if (HARD_RELOAD_AFTER_LOGIN) {
-        const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
-        const intended = location.state?.from?.pathname;
-        localStorage.setItem("postLoginPath", intended || defaultHome);
+        localStorage.setItem("postLoginPath", nextPath);
         window.location.reload();
         return;
       }
@@ -193,10 +191,6 @@ export default function LoginPage() {
       try {
         window.dispatchEvent(new Event("auth-changed"));
       } catch {}
-
-      const defaultHome = role === "admin" ? "/admin/prestadores" : "/solicitudes";
-      const intended = location.state?.from?.pathname;
-      const nextPath = intended || defaultHome;
 
       localStorage.setItem("postLoginPath", nextPath);
       navigate(nextPath, { replace: true });

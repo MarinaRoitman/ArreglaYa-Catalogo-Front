@@ -168,23 +168,33 @@ function App() {
 
   // Derivación de vistas
   const ahora = new Date();
-  const solicitudesData = jobs.filter(
-    (job) => job.estado === 'pendiente' && (!job.fecha || parseCustomDate(job.fecha) > ahora)
-  );
-  const confirmadosData = jobs.filter(
-    (job) =>
-      (job.estado === 'aprobado_por_prestador' || job.estado === 'aprobado_por_usuario') &&
-      (!job.fecha || parseCustomDate(job.fecha) > ahora)
-  );
-  const realizadosData = jobs.filter((job) =>
-    job.estado === "finalizado"
-      ? job.fecha && parseCustomDate(job.fecha) < ahora
-      : job.estado === "cancelado"
-  );  
+const isPast = (d) => {
+  const dt = parseCustomDate(d);
+  return dt ? dt <= ahora : false; // <= para incluir "hoy a esta hora"
+};
 
-  useEffect(() => {
-    console.log("realizadosData:", realizadosData);
-  }, [realizadosData]);
+const solicitudesData = jobs.filter(
+  (job) => job.estado === "pendiente" && (!job.fecha || !isPast(job.fecha))
+);
+
+const confirmadosData = jobs.filter((job) => {
+  const aprobado =
+    job.estado === "aprobado_por_prestador" ||
+    job.estado === "aprobado_por_usuario";
+  // Confirmados: si está aprobado y NO está en pasado (o no tiene fecha)
+  return aprobado && (!job.fecha || !isPast(job.fecha));
+});
+
+const realizadosData = jobs.filter((job) => {
+  // 1) Todo finalizado o cancelado entra SIEMPRE
+  if (job.estado === "finalizado" || job.estado === "cancelado") return true;
+
+  // 2) Además, cualquier aprobado cuya fecha ya pasó también es "realizado"
+  const aprobado =
+    job.estado === "aprobado_por_prestador" ||
+    job.estado === "aprobado_por_usuario";
+  return aprobado && isPast(job.fecha);
+});
 
   // ⛔️ Bloqueá todo hasta terminar la carga
   if (loading) {

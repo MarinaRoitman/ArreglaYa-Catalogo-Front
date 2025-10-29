@@ -6,7 +6,7 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
   const isCritico = (v) => Number(v) === 1;
 
   const isSolicitudes = type === "solicitudes";
-  const isConfirmados = type === "confirmados";
+  //const isConfirmados = type === "confirmados";
   const isRealizados = type === "realizados";
 
   const handleAprobar = (row) => {
@@ -72,13 +72,22 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
                   Crítico
                 </MC.Text>
               </MC.Table.Th>
-              {(isSolicitudes || isConfirmados) && (
+
+              {/* Columna Acciones: solo visible en solicitudes */}
+              {isSolicitudes && (
                 <MC.Table.Th style={{ width: 100, textAlign: "center" }}>
                   <MC.Text fw={600} fz="sm" ta="center">
                     Acciones
                   </MC.Text>
                 </MC.Table.Th>
               )}
+              {/* {isConfirmados && (
+                <MC.Table.Th style={{ width: 100, textAlign: "center" }}>
+                  <MC.Text fw={600} fz="sm" ta="center">
+                    Acciones
+                  </MC.Text>
+                </MC.Table.Th>
+              )} */}
             </MC.Table.Tr>
           </MC.Table.Thead>
 
@@ -111,7 +120,10 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
                   </MC.Text>
                 </MC.Table.Td>
                 <MC.Table.Td>
-                  <MC.Badge variant="light" style={{ display: "block", margin: "0 auto", width: "fit-content" }}>
+                  <MC.Badge
+                    variant="light"
+                    style={{ display: "block", margin: "0 auto", width: "fit-content" }}
+                  >
                     {row?.habilidad ?? "—"}
                   </MC.Badge>
                 </MC.Table.Td>
@@ -136,11 +148,11 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
                   )}
                 </MC.Table.Td>
 
-                {/* Columna acciones */}
-                {(isSolicitudes || isConfirmados) && (
+                {/* Columna Acciones para confirmados */}
+                {isSolicitudes && (
                   <MC.Table.Td style={{ textAlign: "center" }}>
                     <MC.Group gap={6} justify="center" wrap="nowrap">
-                      {isSolicitudes && typeof aprobar === "function" && (
+                      {typeof aprobar === "function" && (
                         <MC.ActionIcon
                           size="md"
                           variant="filled"
@@ -172,6 +184,23 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
                     </MC.Group>
                   </MC.Table.Td>
                 )}
+
+                {/* {isConfirmados && (
+                  <MC.Table.Td style={{ textAlign: "center" }}>
+                    <MC.Group gap={6} justify="center" wrap="nowrap">
+                      <MC.ActionIcon
+                        size="md"
+                        variant="light"
+                        color="#ff0000ff"
+                        aria-label="Rechazar"
+                        onClick={() => handleRechazar(row)}
+                        radius="md"
+                      >
+                        <IconX size={16} />
+                      </MC.ActionIcon>
+                    </MC.Group>
+                  </MC.Table.Td>
+                )} */}
               </MC.Table.Tr>
             ))}
 
