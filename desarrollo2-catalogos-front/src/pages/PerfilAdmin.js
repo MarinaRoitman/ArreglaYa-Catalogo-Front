@@ -177,6 +177,7 @@ try {
     setLoading(true);
 
     let targetId = idAdminSync;
+    console.log("PerfilAdmin: idAdminSync =", idAdminSync);
     if (!targetId) {
     targetId = await discoverIdByEmail();
     }
