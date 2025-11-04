@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Modal, Text, Button, Group, Stack, ThemeIcon, ActionIcon } from "@mantine/core";
 import { IconCheck, IconAlertCircle, IconEye, IconEyeOff } from "@tabler/icons-react";
@@ -47,6 +47,22 @@ export default function RegisterPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Contador para habilitar botón "Ir a Login"
+  const [countdown, setCountdown] = useState(0);
+  useEffect(() => {
+    if (modalOpen && isSuccess) {
+      setCountdown(5); // segundos
+    } else {
+      setCountdown(0);
+    }
+  }, [modalOpen, isSuccess]);
+
+  useEffect(() => {
+    if (!modalOpen || !isSuccess || countdown <= 0) return;
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [modalOpen, isSuccess, countdown]);
 
   // Helpers
   const onlyDigits = (v) => v.replace(/[^\d]/g, "");
@@ -165,7 +181,7 @@ export default function RegisterPage() {
         throw new Error(msg);
       }
 
-      setModalMsg("Registro exitoso. Ahora podés iniciar sesión.");
+      setModalMsg("Registro exitoso. Ya podés iniciar sesión.");
       setIsSuccess(true);
       setModalOpen(true);
     } catch (error) {
@@ -275,9 +291,27 @@ export default function RegisterPage() {
           <Text ta="center" fw={700} fz="lg">
             {modalMsg}
           </Text>
+
+          {isSuccess && (
+            <Text ta="center" fz="sm" c="dimmed">
+              El botón se habilitará en {countdown > 0 ? countdown : 0} segundos.
+            </Text>
+          )}
+
           <Group justify="center" mt="sm">
-            <Button onClick={handleClose} color="#93755E" radius="md" size="md" variant="filled">
-              {isSuccess ? "Ir a Login" : "Cerrar"}
+            <Button
+              onClick={handleClose}
+              color="#93755E"
+              radius="md"
+              size="md"
+              variant="filled"
+              disabled={isSuccess && countdown > 0}
+            >
+              {isSuccess
+                ? countdown > 0
+                  ? `Ir a Login (${countdown})`
+                  : "Ir a Login"
+                : "Cerrar"}
             </Button>
           </Group>
         </Stack>
@@ -299,7 +333,6 @@ export default function RegisterPage() {
           top: 35%;
           transform: translateY(-50%);
           cursor: pointer;
-
         }
       `}</style>
     </>

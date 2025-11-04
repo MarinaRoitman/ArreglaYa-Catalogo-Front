@@ -17,6 +17,7 @@ import AdminServicos from "./pages/AdminServicios";
 import AdminHabilidades from './pages/AdminHabilidades';
 import PerfilAdmin from './pages/PerfilAdmin';
 import AdminPrestadorVinculos from './pages/AdminPrestadorVinculos';
+import AdminZonas from './pages/AdminZonas';
 
 
 // Servicios API
@@ -267,6 +268,14 @@ const realizadosData = jobs.filter((job) => {
         element={
           <RequireRole role="admin">
             <AdminPrestadorVinculos/>
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/admin/zonas"
+        element={
+          <RequireRole role="admin">
+            <AdminZonas/>
           </RequireRole>
         }
       />

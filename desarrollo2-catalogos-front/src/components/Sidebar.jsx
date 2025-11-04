@@ -10,7 +10,8 @@ import {
   IconCreditCard,
   IconStar,
   IconTools,
-  IconTool
+  IconTool,
+  IconMapPin
 } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
@@ -93,6 +94,14 @@ export default function Sidebar() {
                 mt="xs"
                 onClick={() => navigate("/admin/habilidades")}
                 active={pathname.startsWith("/admin/habilidades")}
+                color="#b67747ff"
+              />
+              <NavLink
+                label="Zonas"
+                leftSection={<IconMapPin size={18} />}
+                mt="xs"
+                onClick={() => navigate("/admin/zonas")}
+                active={pathname.startsWith("/admin/zonas")}
                 color="#b67747ff"
               />
               <NavLink
