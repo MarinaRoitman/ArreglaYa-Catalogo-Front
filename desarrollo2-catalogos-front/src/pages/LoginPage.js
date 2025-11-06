@@ -167,6 +167,9 @@ export default function LoginPage() {
             prestador.nombre ||
             `${prestador.nombre || ""} ${prestador.apellido || ""}`.trim() ||
             "Usuario";
+          
+          const fotoUrl = prestador.foto || prestador.foto_url || "";
+          localStorage.setItem("userFoto", fotoUrl);
         } else {
           userName = "Usuario";
         }

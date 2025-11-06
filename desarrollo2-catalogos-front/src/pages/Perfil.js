@@ -21,7 +21,7 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Select from "react-select";
 import { fetchZonas } from "../Api/zonas";
 import {
-getPrestadorById,
+getPrestadores,
 updatePrestador,
 cambiarContrasena,
 addZonaToPrestador,
@@ -49,6 +49,7 @@ export default function Perfil() {
 const navigate = useNavigate();
 const isDesktop = useMediaQuery("(min-width: 1200px)");
 
+const [prestadorId, setPrestadorId] = useState(null);
 const [zonas, setZonas] = useState([]);
 const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 const [form, setForm] = useState({
@@ -117,44 +118,58 @@ useEffect(() => {
 const load = async () => {
     try {
     setLoading(true);
-    const prestadorId = localStorage.getItem("prestador_id");
-    if (!prestadorId) throw new Error("No se encontró prestador_id");
+    const email = localStorage.getItem("login_email");
+    
+    if (!email) {
+        throw new Error("No se encontró el email del usuario en la sesión");
+    }
 
-    const [zonasRes, prestador] = await Promise.all([
+    const [zonasRes, prestadoresRes] = await Promise.all([
         fetchZonas(),
-        getPrestadorById(prestadorId),
+        getPrestadores(),
     ]);
 
-    setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
+    const miPerfil = prestadoresRes.find(p => (p.email || "").trim().toLowerCase() === email);
+    
+    if (!miPerfil) {
+        throw new Error("No se pudo encontrar un perfil de prestador asociado a este email.");
+    }
 
-const nextForm = {
-    nombre: prestador.nombre || "",
-    apellido: prestador.apellido || "",
-    email: prestador.email || "",
-    telefono: prestador.telefono || "",
-    dni: prestador.dni || "",
-    estado: prestador.estado || prestador.estado_pri || "",
-    ciudad: prestador.ciudad || prestador.ciudad_pri || "",
-    calle: prestador.calle || prestador.calle_pri || "",
-    numero: prestador.numero || prestador.numero_pri || "",
-    piso: prestador.piso || prestador.piso_pri || "",
-    departamento: prestador.departamento || prestador.departamento_pri || "",
-};
+    setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
+    setPrestadorId(miPerfil.id); 
+
+    const nextForm = {
+        nombre: miPerfil.nombre || "",
+        apellido: miPerfil.apellido || "",
+        email: miPerfil.email || "",
+        telefono: miPerfil.telefono || "",
+        dni: miPerfil.dni || "",
+        estado: miPerfil.estado || miPerfil.estado_pri || "",
+        ciudad: miPerfil.ciudad || miPerfil.ciudad_pri || "",
+        calle: miPerfil.calle || miPerfil.calle_pri || "",
+        numero: miPerfil.numero || miPerfil.numero_pri || "",
+        piso: miPerfil.piso || miPerfil.piso_pri || "",
+        departamento: miPerfil.departamento || miPerfil.departamento_pri || "",
+    };
     setForm(nextForm);
     setOriginalForm(nextForm);
 
-    const initialFoto = prestador.foto || prestador.foto_url || "";
+    const initialFoto = miPerfil.foto || miPerfil.foto_url || "";
     setFotoUrl(initialFoto);
     setFotoPreview(initialFoto);
+    
+    // Agregamos esta línea para actualizar la foto en localStorage al cargar el perfil
+    localStorage.setItem("userFoto", initialFoto);
 
-    const prestadorZonas = (prestador.zonas || []).map((z) => ({
+    const prestadorZonas = (miPerfil.zonas || []).map((z) => ({
         value: z.id,
         label: z.nombre,
     }));
     setZonasSeleccionadas(prestadorZonas);
     setOriginalZonasIds(prestadorZonas.map((z) => z.value));
 
-    setHabilidades(prestador.habilidades || []);
+    setHabilidades(miPerfil.habilidades || []);
+
     } catch (err) {
     setError(err.message || "Error al cargar el perfil");
     } finally {
@@ -238,19 +253,18 @@ const selectedZonaIds = zonasSeleccionadas.map((z) => z.value);
 const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 const hasFotoChange = fotoFile != null;
 
-// REEMPLAZA TU FUNCIÓN handleSubmit COMPLETA POR ESTA:
 const handleSubmit = async () => {
-  try {
-    setSaving(true);
-    setError("");
-    const prestadorId = localStorage.getItem("prestador_id");
-    if (!prestadorId) throw new Error("No se encontró prestador_id");
+  try {
+    setSaving(true);
+    setError("");
 
-    if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
+    if (!prestadorId) throw new Error("No se pudo confirmar el ID del prestador para guardar.");
+
+    if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
+
       setSuccessOpen(true);
       return;
     }
-
     // --- LÓGICA DE VALIDACIÓN ---
     if (hasFormChanges) {
       const { isValid, nextErrors } = validateForm(form);
@@ -327,15 +341,17 @@ try {
 
 const handleBaja = async () => {
 try {
-    setSaving(true);
-    const prestadorId = localStorage.getItem("prestador_id");
-    if (!prestadorId) throw new Error("No se encontró prestador_id");
+    setSaving(true);
 
-    await updatePrestador(prestadorId, { activo: false });
-    localStorage.removeItem("token");
-    localStorage.removeItem("prestador_id");
-    setBajaOpen(false);
-    navigate("/login", { replace: true });
+    if (!prestadorId) throw new Error("No se pudo confirmar el ID del prestador.");
+
+    await updatePrestador(prestadorId, { activo: false });
+    localStorage.removeItem("token");
+    localStorage.removeItem("prestador_id");
+    localStorage.removeItem("email"); // También borra el email
+    localStorage.removeItem("userFoto"); // Y la foto
+    setBajaOpen(false);
+    navigate("/login", { replace: true });
 } catch (err) {
     setError(err.message || "Error al dar de baja la cuenta");
 } finally {
