@@ -152,11 +152,15 @@ export default function LoginPage() {
 
         if (admin.id != null) {
           localStorage.setItem("id", String(admin.id)); // id correcto de admin
+
         }
         userName =
           admin.nombre ||
           `${admin.nombre || ""} ${admin.apellido || ""}`.trim() ||
           "Admin";
+
+        const fotoUrl = admin.foto || admin.foto_url || "";
+        localStorage.setItem("userFoto", fotoUrl);
 
         localStorage.removeItem("prestador_id");
       } else {
