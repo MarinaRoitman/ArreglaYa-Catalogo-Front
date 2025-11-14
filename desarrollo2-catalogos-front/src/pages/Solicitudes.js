@@ -6,6 +6,7 @@ import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
 import ConfirmDelete from "../components/ModalBorrar";
+import ModalCotizar from "../components/ModalCotizar";
 
 export default function Solicitudes({ data, aprobar, rechazar }) {
   const [fNombre, setFNombre] = useState("");
@@ -14,6 +15,20 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
   const [fFecha, setFFecha] = useState("");
   const [fServ, setFServ] = useState("");
   const [fHab, setFHab] = useState("");
+
+  const [cotizarOpen, setCotizarOpen] = useState(false);
+  const [rowToCotizar, setRowToCotizar] = useState(null);
+
+  const abrirCotizador = (row) => {
+    setRowToCotizar(row);
+    setCotizarOpen(true);
+  };
+
+  const enviarCotizacion = ({ montoTotal, fecha }) => {
+    aprobar(rowToCotizar.id, { montoTotal, fecha }); // ya lo tenés hecho
+    setCotizarOpen(false);
+  };
+
 
   const filteredData = useMemo(() => {
     if (!Array.isArray(data)) return [];
@@ -46,12 +61,18 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
         {filteredData.length === 0 ? (
           <Text ta="center" mt="lg" c="dimmed">No se encontraron resultados</Text>
         ) : isMobile ? (
-          <CardsMobile rows={filteredData} aprobar={aprobar} rechazar={askDelete} type="solicitudes" />
+          <CardsMobile rows={filteredData}  aprobar={abrirCotizador} rechazar={askDelete} type="solicitudes" />
         ) : (
-          <TableComponent rows={filteredData} aprobar={aprobar} rechazar={askDelete} type="solicitudes" />
+          <TableComponent rows={filteredData}  aprobar={abrirCotizador}  rechazar={askDelete} type="solicitudes" />
         )}
       </Paper>
       <ConfirmDelete opened={confirmOpen} onCancel={cancelDelete} onConfirm={confirmDelete} loading={deleting} />
+      <ModalCotizar
+        opened={cotizarOpen}
+        onClose={() => setCotizarOpen(false)}
+        row={rowToCotizar}
+        onSubmit={enviarCotizacion}
+      />
     </AppLayout>
   );
 }

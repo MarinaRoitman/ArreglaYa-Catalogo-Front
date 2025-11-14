@@ -26,6 +26,7 @@ updatePrestador,
 cambiarContrasena,
 addZonaToPrestador,
 removeZonaFromPrestador,
+deletePrestador,
 } from "../Api/prestadores";
 
 import { uploadImageToCloudinary } from "../Api/cloudinary"; //
@@ -340,24 +341,29 @@ try {
 };
 
 const handleBaja = async () => {
-try {
-    setSaving(true);
+  try {
+    setSaving(true);
 
-    if (!prestadorId) throw new Error("No se pudo confirmar el ID del prestador.");
+    if (!prestadorId)
+      throw new Error("No se pudo confirmar el ID del prestador.");
+    await deletePrestador(prestadorId);
 
-    await updatePrestador(prestadorId, { activo: false });
-    localStorage.removeItem("token");
-    localStorage.removeItem("prestador_id");
-    localStorage.removeItem("email"); // También borra el email
-    localStorage.removeItem("userFoto"); // Y la foto
-    setBajaOpen(false);
-    navigate("/login", { replace: true });
-} catch (err) {
+    // Limpiar sesión
+    localStorage.removeItem("token");
+    localStorage.removeItem("prestador_id");
+    localStorage.removeItem("email");
+    localStorage.removeItem("userFoto");
+
+    setBajaOpen(false);
+
+    navigate("/login", { replace: true });
+  } catch (err) {
     setError(err.message || "Error al dar de baja la cuenta");
-} finally {
+  } finally {
     setSaving(false);
-}
+  }
 };
+
 
 const habilidadesFiltradas = useMemo(() => {
 const f = filtro.toLowerCase();

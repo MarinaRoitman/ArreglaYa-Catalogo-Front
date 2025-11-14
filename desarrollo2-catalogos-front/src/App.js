@@ -18,6 +18,7 @@ import AdminHabilidades from './pages/AdminHabilidades';
 import PerfilAdmin from './pages/PerfilAdmin';
 import AdminPrestadorVinculos from './pages/AdminPrestadorVinculos';
 import AdminZonas from './pages/AdminZonas';
+import Cancelados from './pages/Cancelados';
 
 
 // Servicios API
@@ -187,17 +188,21 @@ const confirmadosData = jobs.filter((job) => {
 });
 
 const realizadosData = jobs.filter((job) => {
-  // 1) Todo finalizado o cancelado entra SIEMPRE
-  if (job.estado === "finalizado" || job.estado === "cancelado") return true;
+  // 1) SOLO finalizados
+  if (job.estado === "finalizado") return true;
 
-  // 2) Además, cualquier aprobado cuya fecha ya pasó también es "realizado"
+  // 2) Aprobados cuya fecha YA pasó también cuentan como realizados
   const aprobado =
     job.estado === "aprobado_por_prestador" ||
     job.estado === "aprobado_por_usuario";
+
   return aprobado && isPast(job.fecha);
 });
 
-  // ⛔️ Bloqueá todo hasta terminar la carga
+  const canceladosData = jobs.filter((job) => job.estado === "cancelado");
+
+
+  // Bloqueá todo hasta terminar la carga
   if (loading) {
     return (
       <Center style={{ height: '100vh' }}>
@@ -335,6 +340,13 @@ const realizadosData = jobs.filter((job) => {
             <Calificaciones />
           </PrivateRoute>
         }
+      />
+      <Route 
+        path="/cancelados" 
+        element={<PrivateRoute>
+          <Cancelados 
+        data={canceladosData} 
+        /></PrivateRoute>} 
       />
     </Routes>
   </div>

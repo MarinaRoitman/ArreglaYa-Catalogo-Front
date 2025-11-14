@@ -11,7 +11,8 @@ import {
   IconStar,
   IconTools,
   IconTool,
-  IconMapPin
+  IconMapPin,
+  IconCircleXFilled,
 } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
@@ -138,6 +139,14 @@ export default function Sidebar() {
                 mt="xs"
                 onClick={() => navigate("/realizados")}
                 active={pathname.startsWith("/realizados")}
+                color="#b67747ff"
+              />
+              <NavLink
+                label="Cancelados"
+                leftSection={<IconCircleXFilled size={18} />}
+                mt="xs"
+                onClick={() => navigate("/cancelados")}
+                active={pathname.startsWith("/cancelados")}
                 color="#b67747ff"
               />
               <Divider my="md" />

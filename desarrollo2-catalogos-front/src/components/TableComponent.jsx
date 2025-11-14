@@ -9,14 +9,6 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
   //const isConfirmados = type === "confirmados";
   const isRealizados = type === "realizados";
 
-  const handleAprobar = (row) => {
-    if (!aprobar) return;
-    aprobar(row.id, {
-      fecha: row.fecha ?? null,
-      montoTotal: row.montoTotal ?? 0,
-    });
-  };
-
   const handleRechazar = (row) => {
     if (!rechazar) return;
     rechazar(row.id);
@@ -157,7 +149,7 @@ export default function TableComponent({ rows = [], type, aprobar, rechazar }) {
                           size="md"
                           variant="filled"
                           aria-label="Aprobar"
-                          onClick={() => handleAprobar(row)}
+                          onClick={() => aprobar(row)}
                           styles={{
                             root: {
                               background: "#b67747",
