@@ -534,7 +534,11 @@ return (
             label="Nombre *"
             placeholder="Ej.: Electricista matriculado"
             value={createForm.nombre}
-            onChange={(e) => setCreateForm((f) => ({ ...f, nombre: e.currentTarget.value }))}
+            maxLength={30}
+            onChange={(e) => {
+                const value = e.currentTarget.value;
+                setCreateForm((f) => ({ ...f, nombre: value }));
+            }}
             onBlur={() => setCreateTouched((t) => ({ ...t, nombre: true }))}
             error={
             showCreateNombreError
@@ -551,9 +555,13 @@ return (
             label="Descripción *"
             placeholder="Escribí una breve descripción"
             autosize
-            minRows={2}
+            minRows={1}
+            maxLength={50}
             value={createForm.descripcion}
-            onChange={(e) => setCreateForm((f) => ({ ...f, descripcion: e.currentTarget.value }))}
+            onChange={(e) => {
+                const value = e.currentTarget.value;
+                setCreateForm((f) => ({ ...f, descripcion: value }));
+            }}
             onBlur={() => setCreateTouched((t) => ({ ...t, descripcion: true }))}
             error={showCreateDescError ? "La descripción es obligatoria" : null}
         />
@@ -613,7 +621,11 @@ return (
         <MC.TextInput
             label="Nombre *"
             value={editForm.nombre}
-            onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.currentTarget.value }))}
+            maxLength={30}
+            onChange={(e) => {
+                const value = e.currentTarget.value;
+                setEditForm((f) => ({ ...f, nombre: value }));
+            }}
             onBlur={() => setEditTouched((t) => ({ ...t, nombre: true }))}
             error={
             showEditNombreError
@@ -628,9 +640,13 @@ return (
         <MC.Textarea
             label="Descripción *"
             autosize
-            minRows={2}
+            minRows={1}
             value={editForm.descripcion}
-            onChange={(e) => setEditForm((f) => ({ ...f, descripcion: e.currentTarget.value }))}
+            maxLength={50}
+            onChange={(e) => {
+                const value = e.currentTarget.value;
+                setEditForm((f) => ({ ...f, descripcion: value }));
+            }}
             onBlur={() => setEditTouched((t) => ({ ...t, descripcion: true }))}
             error={showEditDescError ? "La descripción es obligatoria" : null}
         />
