@@ -3,20 +3,22 @@ import { Link, useNavigate } from "react-router-dom";
 import { Modal, Text, Button, Group, Stack, ThemeIcon, ActionIcon } from "@mantine/core";
 import { IconCheck, IconAlertCircle, IconEye, IconEyeOff } from "@tabler/icons-react";
 import { API_URL } from "../Api/api";
+import { getPrestadores } from "../Api/prestadores"; 
+
 import "../../src/Form.css";
 
 const MAX = {
-  nombre: 50,
-  apellido: 50,
-  email: 100,
-  telefono: 15,
+  nombre: 30,
+  apellido: 30,
+  email: 30,
+  telefono: 10,
   dni: 8,
   estado: 30,
   ciudad: 30,
   calle: 30,
-  numero: 6,
+  numero: 4,
   piso: 3,
-  departamento: 5,
+  departamento: 2,
   password: 50,
 };
 
@@ -148,48 +150,67 @@ export default function RegisterPage() {
     return true;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateBeforeSubmit()) return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateBeforeSubmit()) return;
 
+  try {
+    // Traer lista de prestadores para verificar email duplicado
+    let prestadores = [];
     try {
-      const response = await fetch(`${API_URL}auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: formData.nombre.trim(),
-          apellido: formData.apellido.trim(),
-          dni: formData.dni.trim(),
-          email: formData.email.trim(),
-          telefono: formData.telefono.trim(),
-          password: formData.password,
-          estado: formData.estado.trim(),
-          ciudad: formData.ciudad.trim(),
-          calle: formData.calle.trim(),
-          numero: formData.numero.trim(),
-          piso: (formData.piso ?? "").trim(),
-          departamento: (formData.departamento ?? "").trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        let msg = "Error al registrar usuario";
-        try {
-          const errorData = await response.json();
-          msg = errorData.detail || msg;
-        } catch {}
-        throw new Error(msg);
-      }
-
-      setModalMsg("Registro exitoso. Ya podés iniciar sesión.");
-      setIsSuccess(true);
-      setModalOpen(true);
-    } catch (error) {
-      setModalMsg("Error en el registro: " + error.message);
-      setIsSuccess(false);
-      setModalOpen(true);
+      prestadores = await getPrestadores();
+    } catch (err) {
+      console.warn("No se pudo validar email contra prestadores:", err);
     }
-  };
+
+    // Verificar duplicado
+    const existeEmail = prestadores.some(
+      (p) => p.email?.toLowerCase() === formData.email.trim().toLowerCase()
+    );
+
+    if (existeEmail) {
+      return fail("El email ya está registrado.");
+    }
+
+    const response = await fetch(`${API_URL}auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: formData.nombre.trim(),
+        apellido: formData.apellido.trim(),
+        dni: formData.dni.trim(),
+        email: formData.email.trim(),
+        telefono: formData.telefono.trim(),
+        password: formData.password,
+        estado: formData.estado.trim(),
+        ciudad: formData.ciudad.trim(),
+        calle: formData.calle.trim(),
+        numero: formData.numero.trim(),
+        piso: (formData.piso ?? "").trim(),
+        departamento: (formData.departamento ?? "").trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      let msg = "Error al registrar usuario";
+      try {
+        const errorData = await response.json();
+        msg = errorData.detail || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    setModalMsg("Registro exitoso. Ya podés iniciar sesión.");
+    setIsSuccess(true);
+    setModalOpen(true);
+
+  } catch (error) {
+    setModalMsg("Error en el registro: " + error.message);
+    setIsSuccess(false);
+    setModalOpen(true);
+  }
+};
+
 
   const handleClose = () => {
     setModalOpen(false);
@@ -215,7 +236,7 @@ export default function RegisterPage() {
           <input type="text" name="estado" placeholder="Estado / Provincia" value={formData.estado} onChange={handleChange} required maxLength={MAX.estado} />
           <input type="text" name="ciudad" placeholder="Ciudad" value={formData.ciudad} onChange={handleChange} required maxLength={MAX.ciudad} />
           <input type="text" name="calle" placeholder="Calle" value={formData.calle} onChange={handleChange} required maxLength={MAX.calle} />
-          <input type="text" name="numero" placeholder="Número" value={formData.numero} onChange={handleChange} required maxLength={MAX.numero} inputMode="numeric" />
+          <input type="text" name="numero" placeholder="Número/Altura" value={formData.numero} onChange={handleChange} required maxLength={MAX.numero} inputMode="numeric" />
           <input type="text" name="piso" placeholder="Piso (opcional)" value={formData.piso} onChange={handleChange} maxLength={MAX.piso} inputMode="numeric" />
           <input type="text" name="departamento" placeholder="Departamento (opcional)" value={formData.departamento} onChange={handleChange} maxLength={MAX.departamento} />
 

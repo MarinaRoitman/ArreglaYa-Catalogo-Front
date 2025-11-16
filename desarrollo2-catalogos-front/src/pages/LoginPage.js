@@ -118,10 +118,15 @@ export default function LoginPage() {
         body: JSON.stringify({ email: loginEmail, password: formData.contrasena }),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Credenciales inválidas");
-      }
+  if (!res.ok) {
+    let msg = "Credenciales incorrectas";
+    try {
+      const errJson = await res.json();
+      if (errJson?.detail) msg = errJson.detail;
+    } catch {
+    }
+    throw new Error(msg);
+  }
 
       const data = await res.json();
       const token = data?.access_token || data?.token;

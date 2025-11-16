@@ -37,17 +37,17 @@ return res.json();
 }
 
 
-// PUT actualizar habilidad
+// PATCH actualizar habilidad
 
 export async function updateHabilidad(id, { nombre, descripcion, id_rubro }) {
-const res = await fetch(`${API_URL}habilidades/${id}`, {
-method: "PUT",
-headers: getAuthHeaders(),
-body: JSON.stringify({ nombre, descripcion, id_rubro }),
-});
+  const res = await fetch(`${API_URL}habilidades/${id}`, {
+    method: "PATCH", 
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ nombre, descripcion, id_rubro }),
+  });
 
-if (!res.ok) throw new Error(`Error PUT habilidad: ${res.status}`);
-return res.json();
+  if (!res.ok) throw new Error(`Error PATCH habilidad: ${res.status}`);
+  return res.json();
 }
 
 

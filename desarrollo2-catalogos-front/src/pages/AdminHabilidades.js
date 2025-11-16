@@ -95,35 +95,26 @@ const confirmDelete = async () => {
 };
 
 const handleSave = async (payload) => {
-try {
-    // Validación simple en cliente: nombre + rubro duplicado
-    const incomingName = String(payload.nombre).trim().toLowerCase();
-    const incomingRubro = String(payload.id_rubro);
+  try {
+    setErr("");
+    setLoading(true);
 
-    const exists = habilidades.some((h) => {
-    const name = String(h.nombre || "").trim().toLowerCase();
-    const rid  = String(h.id_rubro ?? h.rubro?.id ?? "");
-    const sameRecord = editing ? h.id === editing.id : false;
-    return !sameRecord && name === incomingName && rid === incomingRubro;
-    });
+    const cleanPayload = Object.fromEntries(
+      Object.entries(payload).filter(([k, v]) => v !== undefined && v !== null)
+    );
 
-    if (exists) {
-    setErr("Ya existe una habilidad con ese nombre en el mismo rubro.");
-    return;
-    }
-
-    setErr(""); setLoading(true);
-    if (editing) await updateHabilidad(editing.id, payload);
-    else         await createHabilidad(payload);
+    if (editing) await updateHabilidad(editing.id, cleanPayload);
+    else await createHabilidad(cleanPayload);
 
     setOpen(false);
     setEditing(null);
     await fetchAll();
-} catch (e) {
+
+  } catch (e) {
     setErr(e?.message || "No se pudo guardar la habilidad");
-} finally {
+  } finally {
     setLoading(false);
-}
+  }
 };
 
 

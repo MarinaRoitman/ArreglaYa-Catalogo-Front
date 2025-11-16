@@ -71,6 +71,11 @@ try {
 }
 };
 
+const soloLetras = (value) => {
+  const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+  return regex.test(value);
+};
+
 return (
 <Modal
     opened={opened}
@@ -84,9 +89,11 @@ return (
         placeholder="Ej: Plomería"
         value={nombre}
         onChange={(e) => {
-        setNombre(e.target.value);
-        // limpiar error al tipear
-        if (err) setErr("");
+        const value = e.target.value;
+        if (soloLetras(value)) {
+            setNombre(value);
+            if (err) setErr("");
+        }
         }}
         error={
         isEmpty

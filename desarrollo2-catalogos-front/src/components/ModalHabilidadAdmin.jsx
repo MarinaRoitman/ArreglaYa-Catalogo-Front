@@ -1,6 +1,17 @@
-// src/components/ModalHabilidadAdmin.jsx
 import React, { useEffect, useState } from "react";
-import { Modal, Stack, TextInput, Textarea, Select, Group, Button, Text } from "@mantine/core";
+import {
+Modal,
+Stack,
+TextInput,
+Textarea,
+Select,
+Group,
+Button,
+Text,
+} from "@mantine/core";
+
+const onlyLetters = (v = "") =>
+v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, "");
 
 export default function ModalHabilidadAdmin({
 opened,
@@ -21,19 +32,21 @@ if (opened) {
     setDescripcion(defaultValues?.descripcion ?? "");
     setIdRubro(defaultValues?.id_rubro ?? "");
 } else {
-    setNombre(""); setDescripcion(""); setIdRubro("");
+    setNombre("");
+    setDescripcion("");
+    setIdRubro("");
 }
 }, [opened, defaultValues]);
 
 const handleSave = async () => {
-  if (!nombre.trim() || !idRubro) return;
-  await onSubmit?.({
+if (!nombre.trim() || !idRubro) return;
+
+await onSubmit?.({
     nombre: nombre.trim(),
     descripcion: descripcion.trim(),
-    id_rubro: parseInt(idRubro, 10), // <-- importante
-  });
+    id_rubro: parseInt(idRubro, 10),
+});
 };
-
 
 return (
 <Modal
@@ -42,24 +55,37 @@ return (
     centered
     radius="lg"
     withCloseButton
-    title={<Text fw={700}>{mode === "edit" ? "Editar habilidad" : "Nueva habilidad"}</Text>}
+    title={
+    <Text fw={700}>
+        {mode === "edit" ? "Editar habilidad" : "Nueva habilidad"}
+    </Text>
+    }
 >
     <Stack>
+
     <TextInput
         label="Nombre"
-        placeholder="Ej: Plomería domiciliaria"
+        placeholder="Ej: Plomería"
         value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
+        onChange={(e) =>
+        setNombre(onlyLetters(e.target.value).slice(0, 30))
+        }
         required
+        maxLength={30}
         autoFocus
     />
+
     <Textarea
         label="Descripción"
-        placeholder="Detalle breve del servicio"
+        placeholder="Detalle breve"
         value={descripcion}
-        onChange={(e) => setDescripcion(e.target.value)}
+        onChange={(e) =>
+        setDescripcion(onlyLetters(e.target.value).slice(0, 30))
+        }
         minRows={2}
+        maxLength={30}
     />
+
     <Select
         label="Rubro"
         data={rubrosOpts}
@@ -69,12 +95,14 @@ return (
         placeholder="Seleccioná un rubro"
         required
     />
+
     <Group justify="flex-end" mt="sm">
         <Button variant="light" onClick={onClose} color="#a07353ff">
         Cancelar
         </Button>
+
         <Button onClick={handleSave} loading={loading} color="#93755E">
-            {mode === "edit" ? "Guardar cambios" : "Crear"}
+        {mode === "edit" ? "Guardar cambios" : "Crear"}
         </Button>
     </Group>
     </Stack>

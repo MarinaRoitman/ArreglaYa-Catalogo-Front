@@ -14,26 +14,27 @@ SegmentedControl,
 import { API_URL } from "../Api/api";
 import { listHabilidades, createHabilidad } from "../Api/habilidades";
 
+const onlyLetters = (v = "") =>
+v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, ""); 
+
 export default function ModalHabilidad({
 opened,
 onClose,
-onSelect, // callback que devuelve la habilidad creada o elegida
+onSelect,
 habilidadesActuales = [],
 loading = false,
 }) {
 const [modo, setModo] = useState("existente");
 
-// habilidades existentes
 const [habilidades, setHabilidades] = useState([]);
 const [habilidadId, setHabilidadId] = useState("");
 
-// rubros
 const [rubros, setRubros] = useState([]);
 const [idRubro, setIdRubro] = useState("");
 
-// campos nueva habilidad
 const [nombre, setNombre] = useState("");
 const [descripcion, setDescripcion] = useState("");
+
 const [zonas, setZonas] = useState([]);
 const [idZona, setIdZona] = useState("");
 
@@ -42,29 +43,29 @@ if (!opened) return;
 
 const fetchData = async () => {
     try {
-    // 🔹 habilidades
     const data = await listHabilidades();
     const actualesIds = new Set(habilidadesActuales.map((h) => h.id));
     setHabilidades(data.filter((h) => !actualesIds.has(h.id)));
 
-    // 🔹 rubros
     const token = localStorage.getItem("token");
+
+    // rubros
     const resRubros = await fetch(`${API_URL}rubros/`, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resRubros.ok) throw new Error("Error al traer rubros");
     const rubrosData = await resRubros.json();
-    setRubros(rubrosData.map((r) => ({ value: String(r.id), label: r.nombre })));
+    setRubros(
+        rubrosData.map((r) => ({ value: String(r.id), label: r.nombre }))
+    );
 
-    // 🔹 zonas  <-- INICIA BLOQUE AÑADIDO
+    // zonas
     const resZonas = await fetch(`${API_URL}zonas/`, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resZonas.ok) throw new Error("Error al traer zonas");
     const zonasData = await resZonas.json();
-    setZonas(zonasData.map((z) => ({ value: String(z.id), label: z.nombre })));
-
-
+    setZonas(
+        zonasData.map((z) => ({ value: String(z.id), label: z.nombre }))
+    );
     } catch (err) {
     console.error("Error cargando datos:", err.message);
     }
@@ -72,14 +73,12 @@ const fetchData = async () => {
 
 fetchData();
 
-// limpiar formulario al abrir
 setModo("existente");
 setHabilidadId("");
 setIdRubro("");
 setNombre("");
 setDescripcion("");
-setIdZona(""); 
-
+setIdZona("");
 }, [opened, habilidadesActuales]);
 
 const handleSubmit = async () => {
@@ -89,16 +88,18 @@ try {
     const habilidad = habilidades.find((h) => String(h.id) === habilidadId);
     if (habilidad) onSelect?.(habilidad);
     } else {
-    if (!nombre || !idRubro) {
+    if (!nombre.trim() || !idRubro) {
         alert("Falta completar nombre y rubro");
         return;
     }
+
     const nueva = await createHabilidad({
-        nombre,
-        descripcion,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
         id_rubro: parseInt(idRubro, 10),
         id_zona: parseInt(idZona, 10),
     });
+
     onSelect?.(nueva);
     }
 } catch (err) {
@@ -130,7 +131,10 @@ return (
     {modo === "existente" && (
         <Select
         label="Habilidades disponibles"
-        data={habilidades.map((h) => ({ value: String(h.id), label: h.nombre }))}
+        data={habilidades.map((h) => ({
+            value: String(h.id),
+            label: h.nombre,
+        }))}
         value={habilidadId}
         onChange={setHabilidadId}
         searchable
@@ -143,15 +147,21 @@ return (
         <TextInput
             label="Nombre de la habilidad"
             value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            maxLength={30}
+            onChange={(e) => setNombre(onlyLetters(e.target.value))}
             required
         />
+
         <Textarea
             label="Descripción"
             value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
+            maxLength={40}
+            onChange={(e) =>
+            setDescripcion(onlyLetters(e.target.value))
+            }
             minRows={2}
         />
+
         <Select
             label="Rubro"
             data={rubros}
@@ -161,6 +171,7 @@ return (
             placeholder="Seleccioná un rubro"
             required
         />
+
         <Select
             label="Zona"
             data={zonas}
@@ -174,10 +185,12 @@ return (
     )}
 
     <Divider />
+
     <Group justify="flex-end">
         <Button variant="light" onClick={onClose} color="#a07353ff">
         Cancelar
         </Button>
+
         <Button
         onClick={handleSubmit}
         disabled={modo === "existente" ? !habilidadId : !nombre || !idRubro}

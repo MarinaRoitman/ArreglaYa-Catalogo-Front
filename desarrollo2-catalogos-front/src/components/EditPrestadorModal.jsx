@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Modal, Text, TextInput, Grid, Group, Button, Stack, Alert, MultiSelect } from "@mantine/core";
 import { fetchZonas } from "../Api/zonas";
 
-const MAX = 50;
+const MAX = 30;
+
+const onlyDigits = (v = "") => v.replace(/\D+/g, "");
+const onlyLetters = (v = "") => v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
 
 export default function EditPrestadorModal({
   opened,
@@ -252,7 +255,7 @@ export default function EditPrestadorModal({
               onChange={handleChange("telefono")}
               error={errors.telefono}
               disabled={loading}
-              maxLength={MAX}
+              maxLength={10}
               inputMode="numeric"
             />
           </Grid.Col>
@@ -300,31 +303,37 @@ export default function EditPrestadorModal({
               onChange={handleChange("numero")}
               error={errors.numero}
               disabled={loading}
-              maxLength={MAX}
+              maxLength={4}
               inputMode="numeric"
               placeholder="Ej: 213"
             />
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, sm: 6 }}>
-            <TextInput
-              label="Piso (opcional)"
-              value={values.piso}
-              onChange={handleChange("piso")}
-              disabled={loading}
-              maxLength={MAX}
-              placeholder="Ej: 3"
-            />
+          <TextInput
+            label="Piso (opcional)"
+            value={values.piso}
+            onChange={(e) => {
+              let v = onlyDigits(e.target.value).slice(0, 3); // ← solo números y máx 3
+              setValues((prev) => ({ ...prev, piso: v }));
+            }}
+            disabled={loading}
+            placeholder="Ej: 3"
+            maxLength={3}
+          />
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, sm: 6 }}>
             <TextInput
               label="Departamento (opcional)"
               value={values.departamento}
-              onChange={handleChange("departamento")}
+              onChange={(e) => {
+                let v = onlyLetters(e.target.value).toUpperCase().slice(0, 2);
+                setValues((prev) => ({ ...prev, departamento: v }));
+              }}
               disabled={loading}
-              maxLength={MAX}
               placeholder="Ej: B"
+              maxLength={2}
             />
           </Grid.Col>
 

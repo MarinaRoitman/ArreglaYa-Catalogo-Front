@@ -21,12 +21,11 @@ import AppLayout from "../components/LayoutTrabajosPendientes";
 import Select from "react-select";
 import { fetchZonas } from "../Api/zonas";
 import {
-getPrestadores,
+getPrestadorById,
 updatePrestador,
 cambiarContrasena,
 addZonaToPrestador,
 removeZonaFromPrestador,
-deletePrestador,
 } from "../Api/prestadores";
 
 import { uploadImageToCloudinary } from "../Api/cloudinary"; //
@@ -50,7 +49,6 @@ export default function Perfil() {
 const navigate = useNavigate();
 const isDesktop = useMediaQuery("(min-width: 1200px)");
 
-const [prestadorId, setPrestadorId] = useState(null);
 const [zonas, setZonas] = useState([]);
 const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
 const [form, setForm] = useState({
@@ -84,12 +82,12 @@ const [errors, setErrors] = useState({
 const MAX = {
   nombre: 30,
   apellido: 30,
-  email: 60,
-  telefono: 15,
-  estado: 50,
-  ciudad: 50,
-  calle: 50,
-  numero: 5,
+  email: 30,
+  telefono: 10,
+  estado: 30,
+  ciudad: 30,
+  calle: 30,
+  numero: 4,
   piso: 3,
   departamento: 2,
 };
@@ -119,58 +117,44 @@ useEffect(() => {
 const load = async () => {
     try {
     setLoading(true);
-    const email = localStorage.getItem("login_email");
-    
-    if (!email) {
-        throw new Error("No se encontró el email del usuario en la sesión");
-    }
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    const [zonasRes, prestadoresRes] = await Promise.all([
+    const [zonasRes, prestador] = await Promise.all([
         fetchZonas(),
-        getPrestadores(),
+        getPrestadorById(prestadorId),
     ]);
 
-    const miPerfil = prestadoresRes.find(p => (p.email || "").trim().toLowerCase() === email);
-    
-    if (!miPerfil) {
-        throw new Error("No se pudo encontrar un perfil de prestador asociado a este email.");
-    }
-
     setZonas(zonasRes.map((z) => ({ value: z.id, label: z.nombre })));
-    setPrestadorId(miPerfil.id); 
 
-    const nextForm = {
-        nombre: miPerfil.nombre || "",
-        apellido: miPerfil.apellido || "",
-        email: miPerfil.email || "",
-        telefono: miPerfil.telefono || "",
-        dni: miPerfil.dni || "",
-        estado: miPerfil.estado || miPerfil.estado_pri || "",
-        ciudad: miPerfil.ciudad || miPerfil.ciudad_pri || "",
-        calle: miPerfil.calle || miPerfil.calle_pri || "",
-        numero: miPerfil.numero || miPerfil.numero_pri || "",
-        piso: miPerfil.piso || miPerfil.piso_pri || "",
-        departamento: miPerfil.departamento || miPerfil.departamento_pri || "",
-    };
+const nextForm = {
+    nombre: prestador.nombre || "",
+    apellido: prestador.apellido || "",
+    email: prestador.email || "",
+    telefono: prestador.telefono || "",
+    dni: prestador.dni || "",
+    estado: prestador.estado || prestador.estado_pri || "",
+    ciudad: prestador.ciudad || prestador.ciudad_pri || "",
+    calle: prestador.calle || prestador.calle_pri || "",
+    numero: prestador.numero || prestador.numero_pri || "",
+    piso: prestador.piso || prestador.piso_pri || "",
+    departamento: prestador.departamento || prestador.departamento_pri || "",
+};
     setForm(nextForm);
     setOriginalForm(nextForm);
 
-    const initialFoto = miPerfil.foto || miPerfil.foto_url || "";
+    const initialFoto = prestador.foto || prestador.foto_url || "";
     setFotoUrl(initialFoto);
     setFotoPreview(initialFoto);
-    
-    // Agregamos esta línea para actualizar la foto en localStorage al cargar el perfil
-    localStorage.setItem("userFoto", initialFoto);
 
-    const prestadorZonas = (miPerfil.zonas || []).map((z) => ({
+    const prestadorZonas = (prestador.zonas || []).map((z) => ({
         value: z.id,
         label: z.nombre,
     }));
     setZonasSeleccionadas(prestadorZonas);
     setOriginalZonasIds(prestadorZonas.map((z) => z.value));
 
-    setHabilidades(miPerfil.habilidades || []);
-
+    setHabilidades(prestador.habilidades || []);
     } catch (err) {
     setError(err.message || "Error al cargar el perfil");
     } finally {
@@ -255,17 +239,17 @@ const hasZonaChanges = !sameIdSets(selectedZonaIds, originalZonasIds);
 const hasFotoChange = fotoFile != null;
 
 const handleSubmit = async () => {
-  try {
-    setSaving(true);
-    setError("");
+  try {
+    setSaving(true);
+    setError("");
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    if (!prestadorId) throw new Error("No se pudo confirmar el ID del prestador para guardar.");
-
-    if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
-
+    if (!hasFormChanges && !hasZonaChanges && !hasFotoChange) {
       setSuccessOpen(true);
       return;
     }
+
     // --- LÓGICA DE VALIDACIÓN ---
     if (hasFormChanges) {
       const { isValid, nextErrors } = validateForm(form);
@@ -315,11 +299,23 @@ const handleSubmit = async () => {
 
     setSuccessOpen(true);
 
-  } catch (err) {
-    setError(err.message || "Error al guardar cambios");
-  } finally {
-    setSaving(false);
+} catch (err) {
+  console.error(err);
+
+  let backendMsg =
+    err?.message ||
+    err?.response?.data?.detail ||
+    err?.detail ||
+    "";
+
+  if (backendMsg.toLowerCase().includes("email")) {
+    setError("Este email ya está siendo utilizado.");
+  } else {
+    setError("Ocurrió un error al guardar los cambios.");
   }
+} finally {
+  setSaving(false);
+}
 };
 
 const handlePasswordChange = async (newPassword) => {
@@ -341,29 +337,22 @@ try {
 };
 
 const handleBaja = async () => {
-  try {
+try {
     setSaving(true);
+    const prestadorId = localStorage.getItem("prestador_id");
+    if (!prestadorId) throw new Error("No se encontró prestador_id");
 
-    if (!prestadorId)
-      throw new Error("No se pudo confirmar el ID del prestador.");
-    await deletePrestador(prestadorId);
-
-    // Limpiar sesión
+    await updatePrestador(prestadorId, { activo: false });
     localStorage.removeItem("token");
     localStorage.removeItem("prestador_id");
-    localStorage.removeItem("email");
-    localStorage.removeItem("userFoto");
-
     setBajaOpen(false);
-
     navigate("/login", { replace: true });
-  } catch (err) {
+} catch (err) {
     setError(err.message || "Error al dar de baja la cuenta");
-  } finally {
+} finally {
     setSaving(false);
-  }
+}
 };
-
 
 const habilidadesFiltradas = useMemo(() => {
 const f = filtro.toLowerCase();

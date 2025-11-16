@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Paper, Text, Group, Button, Pagination, useMantineTheme } from "@mantine/core";
+import { Paper, Text, Group, Button, useMantineTheme } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import AppLayout from "../components/LayoutTrabajosPendientes";
@@ -12,16 +12,12 @@ import { API_URL } from "../Api/api";
 import { addHabilidadToPrestador, removeHabilidadFromPrestador } from "../Api/prestadores";
 
 export default function Habilidades() {
-const [data, setData] = useState([]); // habilidades del prestador
+const [data, setData] = useState([]); 
 const [loading, setLoading] = useState(true);
 
 // filtros
 const [fNombre, setFNombre] = useState("");
 const [fServicio, setFServicio] = useState("");
-
-// paginación
-const pageSize = 10;
-const [page, setPage] = useState(1);
 
 // 🔹 cargar habilidades del prestador
 useEffect(() => {
@@ -62,22 +58,20 @@ fetchHabilidadesPrestador();
 const filtered = useMemo(() => {
 const match = (v, f) =>
     String(v ?? "").toLowerCase().includes(f.trim().toLowerCase());
+
 return (data || []).filter((h) => {
     const servicioNombre = h.nombre_rubro ?? "";
     return match(h.nombre, fNombre) && match(servicioNombre, fServicio);
 });
 }, [data, fNombre, fServicio]);
 
-const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
-
 const rowsView = useMemo(
 () =>
-    pageData.map((h) => ({
+    filtered.map((h) => ({
     ...h,
     servicio: h.nombre_rubro ?? "—",
     })),
-[pageData]
+[filtered]
 );
 
 // ---- Crear ----
@@ -90,14 +84,13 @@ try {
     const prestadorId = localStorage.getItem("prestador_id");
     if (!prestadorId) throw new Error("Falta prestador_id");
 
-    // asociamos al prestador
     await addHabilidadToPrestador(prestadorId, habilidad.id);
 
-    // refrescamos
     const token = localStorage.getItem("token");
     const res = await fetch(`${API_URL}prestadores/${prestadorId}`, {
     headers: { Authorization: `Bearer ${token}` },
     });
+
     const prestador = await res.json();
     setData(prestador.habilidades || []);
 
@@ -123,8 +116,11 @@ const confirmDelete = async () => {
 try {
     const prestadorId = localStorage.getItem("prestador_id");
     if (!prestadorId) throw new Error("Falta prestador_id");
+
     await removeHabilidadFromPrestador(prestadorId, deletingId);
+
     setData((prev) => prev.filter((h) => h.id !== deletingId));
+
     setConfirmOpen(false);
     setDeletingId(null);
 } catch (err) {
@@ -133,7 +129,6 @@ try {
 }
 };
 
-// responsive
 const theme = useMantineTheme();
 const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
 
@@ -143,9 +138,10 @@ return (
     p="lg"
     maw={{ base: "100%", lg: 1100, xl: 1200 }}
     mx="auto"
-    radius="lg" shadow="sm"
+    radius="lg"
+    shadow="sm"
     style={{
-        background:"--app-bg",
+        background: "--app-bg",
         border: "1px solid var(--input-border)",
     }}
     >
@@ -169,39 +165,13 @@ return (
         setFNombre={setFNombre}
         fServicio={fServicio}
         setFServicio={setFServicio}
-        setPage={setPage}
     />
 
     {isMobile ? (
-        <CardsHabilidad
-        rows={rowsView}
-        onDelete={askDelete}
-        loading={loading}
-        />
+        <CardsHabilidad rows={rowsView} onDelete={askDelete} loading={loading} />
     ) : (
-        <TableHabilidad
-        rows={rowsView}
-        onDelete={askDelete}
-        loading={loading}
-        />
+        <TableHabilidad rows={rowsView} onDelete={askDelete} loading={loading} />
     )}
-
-    <Group justify={isMobile ? "center" : "space-between"} mt="md">
-        {!isMobile && (
-        <Text size="sm" c="dimmed">
-            Página <Text span fw={700}>{page}</Text> de {totalPages}
-        </Text>
-        )}
-        <Pagination
-        value={page}
-        onChange={setPage}
-        total={totalPages}
-        color="#93755E"
-        variant="filled"
-        radius="md"
-        size={isMobile ? "md" : "sm"}
-        />
-    </Group>
     </Paper>
 
     <ModalHabilidad

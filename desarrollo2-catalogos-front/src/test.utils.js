@@ -1,3 +1,4 @@
+import React from "react";
 import { MantineProvider } from "@mantine/core";
 import { render as rtlRender } from "@testing-library/react";
 

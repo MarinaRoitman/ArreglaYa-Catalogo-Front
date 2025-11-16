@@ -54,6 +54,11 @@ setSaving(false);
 }
 };
 
+const soloLetras = (value) => {
+  const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+  return regex.test(value);
+};
+
 return (
 <Modal
 opened={opened}
@@ -67,7 +72,12 @@ radius="lg"
     label="Nombre"
     placeholder="Ej: Almagro"
     value={nombre}
-    onChange={(e) => setNombre(e.target.value)}
+    onChange={(e) => {
+    const value = e.target.value;
+    if (soloLetras(value)) {
+        setNombre(value);
+        }
+    }}
     withAsterisk
     error={
     isDuplicate
@@ -76,6 +86,7 @@ radius="lg"
         ? "El nombre es obligatorio"
         : undefined
     }
+    maxLength={20}  
 />
 
 {err && <Text c="red" fz="sm">{err}</Text>}

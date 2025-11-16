@@ -35,14 +35,6 @@ const parseCustomDate = (dateString) => {
   return isNaN(d) ? null : d;
 };
 
-const formatDireccionPrimaria = (u = {}) => {
-  const calle = u?.calle_pri?.trim();
-  const numero = u?.numero_pri?.trim();
-  if (calle && numero) return `${calle} ${numero}`;
-  if (calle) return calle;
-  return "Sin dirección";
-};
-
 function App() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +101,7 @@ function App() {
           id: job?.id ?? `tmp-${Math.random().toString(36).slice(2)}`,
           nombre: `${usuario?.nombre || 'Usuario'} ${usuario?.apellido || ''}`.trim(),
           telefono: usuario?.telefono || 'N/A',
-          direccion: formatDireccionPrimaria(usuario),
+          direccion: job?.direccion?.trim() || "Sin dirección",
           fecha: job?.fecha ?? null,
           fechaHora: fechaHoraFmt,
           servicio: job?.descripcion ?? '',
