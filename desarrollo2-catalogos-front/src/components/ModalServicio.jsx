@@ -88,6 +88,7 @@ return (
         label="Nombre del rubro"
         placeholder="Ej: Plomería"
         value={nombre}
+        maxLength={30}
         onChange={(e) => {
         const value = e.target.value;
         if (soloLetras(value)) {
