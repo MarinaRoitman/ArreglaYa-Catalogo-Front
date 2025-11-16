@@ -14,15 +14,17 @@ const norm = (s) =>
 export default function ModalServicio({ opened, onClose, rubro, rubros = [], onSaved }) {
 const isEdit = !!rubro?.id;
 const [nombre, setNombre] = useState("");
+const [originalNombre, setOriginalNombre] = useState("");
 const [saving, setSaving] = useState(false);
 const [err, setErr] = useState("");
 
 useEffect(() => {
 setErr("");
-setNombre(rubro?.nombre ?? "");
+const initial = rubro?.nombre ?? "";
+setNombre(initial);
+setOriginalNombre(initial); 
 }, [rubro, opened]);
 
-// Set de nombres ya usados (normalizados), excluyendo el actual cuando editás
 const usedNames = useMemo(() => {
 const currentNorm = norm(rubro?.nombre);
 const set = new Set(
@@ -38,8 +40,9 @@ const nombreNorm = norm(nombre);
 const isEmpty = nombreNorm.length === 0;
 const isDuplicate = usedNames.has(nombreNorm);
 
+const isChanged = nombre.trim() !== originalNombre.trim();
+
 const handleSubmit = async () => {
-// Validación front antes de pegarle al backend
 if (isEmpty) {
     setErr("El nombre es obligatorio");
     return;
@@ -48,18 +51,22 @@ if (isDuplicate) {
     setErr("Ya existe un rubro con ese nombre");
     return;
 }
+if (isEdit && !isChanged) {
+    return; 
+}
 
 try {
     setSaving(true);
     setErr("");
+
     if (isEdit) {
     await updateRubro(rubro.id, { nombre: nombre.trim() });
     } else {
     await createRubro({ nombre: nombre.trim() });
     }
+
     onSaved?.();
 } catch (e) {
-    // Si el backend devuelve 409/400 por duplicado, lo mostramos
     const msg = e?.message || "No se pudo guardar el rubro";
     setErr(
     /duplicad|ya existe|conflict/i.test(msg)
@@ -72,8 +79,8 @@ try {
 };
 
 const soloLetras = (value) => {
-  const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
-  return regex.test(value);
+const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+return regex.test(value);
 };
 
 return (
@@ -90,7 +97,7 @@ return (
         value={nombre}
         maxLength={30}
         onChange={(e) => {
-        const value = e.target.value;
+        const value = e.currentTarget.value;
         if (soloLetras(value)) {
             setNombre(value);
             if (err) setErr("");
@@ -117,7 +124,16 @@ return (
         <Button variant="default" onClick={onClose} disabled={saving}>
         Cancelar
         </Button>
-        <Button onClick={handleSubmit} loading={saving} disabled={isEmpty || isDuplicate}>
+
+        <Button
+        onClick={handleSubmit}
+        loading={saving}
+        disabled={
+            isEmpty ||
+            isDuplicate ||
+            (isEdit && !isChanged) 
+        }
+        >
         {isEdit ? "Guardar cambios" : "Crear rubro"}
         </Button>
     </Group>
