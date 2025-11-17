@@ -1,4 +1,31 @@
 @import '@mantine/dates/styles.css';
+
+:root[data-mantine-color-scheme='light'] {
+  --app-bg: #e6e0d8;
+  --card-bg: #ffffff;
+
+  --text: #5d4037d4;
+
+  --input-bg: #f9f9f9;
+  --input-border: #ddd;
+
+  --focus-bg: #ffffff;
+  --focus-border: #8d6e63;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --app-bg: #242424;
+  --card-bg: #2e2623;
+
+  --text: #f0e6dc;
+
+  --input-bg: #2d2d2d;
+  --input-border: #555;
+
+  --focus-bg: #3a3a3a;
+  --focus-border: #a1887f;
+}
+
 /* Estilo general para centrar el formulario en la página */
 .form-wrapper {
   display: flex;
@@ -202,4 +229,36 @@
   border: 1px solid #8d6e63 !important;
   background-color: #fff !important;
   box-shadow: 0 0 5px rgba(141, 110, 99, 0.3) !important;
+}
+
+/* -------------------------
+   DARK MODE — PasswordInput
+-------------------------- */
+:root[data-mantine-color-scheme='dark'] .form-container .mantine-PasswordInput-innerInput {
+  background-color: #2d2d2d !important;
+  color: var(--text) !important;
+}
+
+:root[data-mantine-color-scheme='dark'] .form-container .mantine-PasswordInput-innerInput::placeholder {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+/* -------------------------
+   DARK MODE — TextInput (Email)
+-------------------------- */
+:root[data-mantine-color-scheme='dark'] .form-container .mantine-TextInput-input {
+  background-color: #2d2d2d !important;
+  color: var(--text) !important;
+}
+
+:root[data-mantine-color-scheme='dark'] .form-container .mantine-TextInput-input::placeholder {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+:root[data-mantine-color-scheme='dark'] .form-container .mantine-TextInput-input:focus {
+  background-color: #3a3a3a !important;
+  border-color: #a1887f !important;
+  box-shadow: 0 0 5px rgba(161, 136, 127, 0.4) !important;
 }
