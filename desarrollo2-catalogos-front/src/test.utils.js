@@ -1,10 +1,18 @@
 import React from "react";
-import { MantineProvider } from "@mantine/core";
 import { render as rtlRender } from "@testing-library/react";
+import { MantineProvider } from "@mantine/core";
+import { MemoryRouter } from "react-router-dom";
 
-function render(ui, options) {
-  return rtlRender(<MantineProvider>{ui}</MantineProvider>, options);
+function render(ui, { route = "/" , ...options } = {}) {
+  return rtlRender(
+    <MemoryRouter initialEntries={[route]}>
+      <MantineProvider>
+        {ui}
+      </MantineProvider>
+    </MemoryRouter>,
+    options
+  );
 }
 
-export * from "@testing-library/react"; // re-exporta screen, fireEvent, waitFor, etc.
+export * from "@testing-library/react";
 export { render };

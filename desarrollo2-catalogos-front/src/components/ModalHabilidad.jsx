@@ -15,7 +15,7 @@ import { API_URL } from "../Api/api";
 import { listHabilidades, createHabilidad } from "../Api/habilidades";
 
 const onlyLetters = (v = "") =>
-v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, ""); 
+v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, "");
 
 export default function ModalHabilidad({
 opened,
@@ -34,9 +34,6 @@ const [idRubro, setIdRubro] = useState("");
 
 const [nombre, setNombre] = useState("");
 const [descripcion, setDescripcion] = useState("");
-
-const [zonas, setZonas] = useState([]);
-const [idZona, setIdZona] = useState("");
 
 useEffect(() => {
 if (!opened) return;
@@ -57,15 +54,6 @@ const fetchData = async () => {
     setRubros(
         rubrosData.map((r) => ({ value: String(r.id), label: r.nombre }))
     );
-
-    // zonas
-    const resZonas = await fetch(`${API_URL}zonas/`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-    const zonasData = await resZonas.json();
-    setZonas(
-        zonasData.map((z) => ({ value: String(z.id), label: z.nombre }))
-    );
     } catch (err) {
     console.error("Error cargando datos:", err.message);
     }
@@ -73,12 +61,12 @@ const fetchData = async () => {
 
 fetchData();
 
+// reset
 setModo("existente");
 setHabilidadId("");
 setIdRubro("");
 setNombre("");
 setDescripcion("");
-setIdZona("");
 }, [opened, habilidadesActuales]);
 
 const handleSubmit = async () => {
@@ -97,7 +85,6 @@ try {
         nombre: nombre.trim(),
         descripcion: descripcion.trim(),
         id_rubro: parseInt(idRubro, 10),
-        id_zona: parseInt(idZona, 10),
     });
 
     onSelect?.(nueva);
@@ -156,9 +143,7 @@ return (
             label="Descripción"
             value={descripcion}
             maxLength={40}
-            onChange={(e) =>
-            setDescripcion(onlyLetters(e.target.value))
-            }
+            onChange={(e) => setDescripcion(onlyLetters(e.target.value))}
             minRows={2}
         />
 
@@ -169,16 +154,6 @@ return (
             onChange={setIdRubro}
             searchable
             placeholder="Seleccioná un rubro"
-            required
-        />
-
-        <Select
-            label="Zona"
-            data={zonas}
-            value={idZona}
-            onChange={setIdZona}
-            searchable
-            placeholder="Seleccioná una zona de trabajo"
             required
         />
         </>
@@ -193,7 +168,9 @@ return (
 
         <Button
         onClick={handleSubmit}
-        disabled={modo === "existente" ? !habilidadId : !nombre || !idRubro}
+        disabled={
+            modo === "existente" ? !habilidadId : !nombre || !idRubro
+        }
         loading={loading}
         color="#93755E"
         >

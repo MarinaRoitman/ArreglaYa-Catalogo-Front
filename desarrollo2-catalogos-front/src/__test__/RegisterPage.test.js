@@ -1,97 +1,165 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../test.utils";
 import RegisterPage from "../pages/RegisterPage";
+import { getPrestadores } from "../Api/prestadores";
+import { act } from "react-dom/test-utils";
 
-// ---------- MOCK MANTINE ----------
-jest.mock("@mantine/core", () => ({
-  Modal: ({ opened, children }) => (opened ? <div role="dialog">{children}</div> : null),
-  Text: ({ children }) => <span>{children}</span>,
-  Button: ({ children, ...p }) => <button {...p}>{children}</button>,
-  Group: ({ children }) => <div>{children}</div>,
-  Stack: ({ children }) => <div>{children}</div>,
-  ThemeIcon: ({ children }) => <div>{children}</div>,
-  ActionIcon: ({ children, ...p }) => <button {...p}>{children}</button>,
-}));
-
-jest.mock("@tabler/icons-react", () => ({
-  IconCheck: () => <span>✔</span>,
-  IconAlertCircle: () => <span>⚠</span>,
-  IconEye: () => <span>👁</span>,
-  IconEyeOff: () => <span>🚫</span>,
-}));
-
-// ---------- MOCK ROUTER ----------
-const mockedNavigate = jest.fn();
-jest.mock("react-router-dom", () => ({
-  Link: ({ children }) => <a>{children}</a>,
-  useNavigate: () => mockedNavigate,
-}));
-
-// ---------- MOCK CSS ----------
-jest.mock("../../src/Form.css", () => ({}), { virtual: true });
-
-// ---------- MOCK getPrestadores (no fetch interno) ----------
 jest.mock("../Api/prestadores", () => ({
-  getPrestadores: jest.fn(() => Promise.resolve([])),
+  getPrestadores: jest.fn(),
 }));
 
-describe("RegisterPage simple coverage WITHOUT fetch", () => {
+// mock useNavigate
+const mockNavigate = jest.fn();
+
+jest.mock("react-router-dom", () => {
+  const original = jest.requireActual("react-router-dom");
+  return {
+    ...original,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// mock fetch global
+global.fetch = jest.fn();
+
+describe("RegisterPage", () => {
   beforeEach(() => {
-    mockedNavigate.mockClear();
+    jest.clearAllMocks();
+    mockNavigate.mockReset();
   });
 
-  test("renderiza títulos y botón", () => {
+  /* -------------------------------------------------- */
+  it("renderiza inputs y botón Guardar", () => {
     render(<RegisterPage />);
 
-    expect(screen.getByText(/Arregla Ya/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Guardar/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Nombre")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Apellido")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Guardar/i })
+    ).toBeInTheDocument();
   });
 
-  test("validación fallida muestra modal", async () => {
-    render(<RegisterPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-  });
-
-  test("toggle de password cambia estado", () => {
-    render(<RegisterPage />);
-
-    const toggles = screen.getAllByText("👁");
-    fireEvent.click(toggles[0]); // toggle password
-    fireEvent.click(toggles[1]); // toggle repita password
-
-    // si no explota → cubrimos ramas
-  });
-
-  test("cerrar modal de error NO navega", async () => {
+  /* -------------------------------------------------- */
+  it("muestra error si falta completar datos", async () => {
     render(<RegisterPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
 
-    const closeBtn = await screen.findByText(/Cerrar/i);
-    fireEvent.click(closeBtn);
-
-    expect(mockedNavigate).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("El nombre es obligatorio.")
+    ).toBeInTheDocument();
   });
 
-  test("llenar algunos campos no produce crash (cubre handleChange)", () => {
+  /* -------------------------------------------------- */
+  it("muestra error si el email ya está registrado", async () => {
+    getPrestadores.mockResolvedValueOnce([{ email: "test@test.com" }]);
+
     render(<RegisterPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Nombre"), {
       target: { value: "Martina" },
     });
-
     fireEvent.change(screen.getByPlaceholderText("Apellido"), {
       target: { value: "Perez" },
     });
-
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Teléfono"), {
+      target: { value: "12345678" },
+    });
     fireEvent.change(screen.getByPlaceholderText("DNI"), {
       target: { value: "12345678" },
     });
 
-    // siquiera testear el value → ya cubrimos handleChange
-    expect(screen.getByPlaceholderText("Nombre").value).toBe("Martina");
+    fireEvent.change(screen.getByPlaceholderText("Estado / Provincia"), {
+      target: { value: "Buenos Aires" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Ciudad"), {
+      target: { value: "CABA" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Calle"), {
+      target: { value: "Calle Falsa" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Número/Altura"), {
+      target: { value: "123" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
+      target: { value: "Marti123!" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
+      target: { value: "Marti123!" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
+
+    expect(
+      await screen.findByText("El email ya está registrado.")
+    ).toBeInTheDocument();
+  });
+
+  /* -------------------------------------------------- */
+  it("muestra modal de éxito cuando el registro es exitoso", async () => {
+    getPrestadores.mockResolvedValueOnce([]);
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: "ok" }),
+    });
+
+    render(<RegisterPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Nombre"), {
+      target: { value: "Martina" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Apellido"), {
+      target: { value: "Perez" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "marti@test.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Teléfono"), {
+      target: { value: "12345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("DNI"), {
+      target: { value: "12345678" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Estado / Provincia"), {
+      target: { value: "Buenos Aires" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Ciudad"), {
+      target: { value: "CABA" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Calle"), {
+      target: { value: "Calle Falsa" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Número/Altura"), {
+      target: { value: "123" },
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
+      target: { value: "Marti123!" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
+      target: { value: "Marti123!" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
+
+    expect(
+      await screen.findByText("Registro exitoso. Ya podés iniciar sesión.")
+    ).toBeInTheDocument();
+  });
+
+  /* -------------------------------------------------- */
+  it("toggle del ojo de contraseña funciona", () => {
+    render(<RegisterPage />);
+
+    const buttons = screen.getAllByRole("button");
+    // simplemente chequear que se pueda clickeaar sin romper
+    fireEvent.click(buttons[1]);
   });
 });

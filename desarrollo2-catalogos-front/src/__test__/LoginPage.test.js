@@ -1,88 +1,158 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "../test.utils";
 import LoginPage from "../pages/LoginPage";
+import { API_URL } from "../Api/api";
 
-/* ========= MOCKS ========= */
+/* ============================================================
+   MOCKS
+============================================================ */
 
-jest.mock("@mantine/core", () => ({
-  Modal: ({ opened, children }) => (opened ? <div role="dialog">{children}</div> : null),
-  Text: ({ children }) => <p>{children}</p>,
-  Button: ({ children, ...p }) => <button {...p}>{children}</button>,
-  Group: ({ children }) => <div>{children}</div>,
-  Stack: ({ children }) => <div>{children}</div>,
-  ThemeIcon: ({ children }) => <div>{children}</div>,
-  Loader: () => <div>Loading...</div>,
-  Center: ({ children }) => <div>{children}</div>,
-}));
-
+// mock navigate y location
 const mockNavigate = jest.fn();
-jest.mock("react-router-dom", () => ({
-  useNavigate: () => mockNavigate,
-  useLocation: () => ({ state: null }),
-  Link: ({ to, children }) => <a href={to}>{children}</a>,
-}));
 
-// fetch mock sin errores ni backend real
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ access_token: "aaa.bbb.ccc" }),
-  })
-);
+jest.mock("react-router-dom", () => {
+  const original = jest.requireActual("react-router-dom");
+  return {
+    ...original,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ state: null }),
+  };
+});
 
-/* ========= TESTS ========= */
+// mock fetch global
+global.fetch = jest.fn();
 
-describe("LoginPage cobertura mejorada sin errores", () => {
+// mock localStorage
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (k) => store[k],
+    setItem: (k, v) => (store[k] = v),
+    removeItem: (k) => delete store[k],
+    clear: () => (store = {}),
+  };
+})();
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
+
+/* ============================================================
+   JWT MOCKS válidos
+============================================================ */
+
+// ADMIN → { "role": "admin" }
+const ADMIN_JWT = "aaa.eyJyb2xlIjoiYWRtaW4ifQ.ccc";
+
+// PRESTADOR → { "role": "prestador" }
+const PRESTADOR_JWT = "aaa.eyJyb2xlIjoicHJlc3RhZG9yIn0.ccc";
+
+
+/* ============================================================
+   TESTS
+============================================================ */
+
+describe("LoginPage", () => {
   beforeEach(() => {
-    mockNavigate.mockClear();
-    global.fetch.mockClear();
-    localStorage.clear();
+    jest.clearAllMocks();
+    window.localStorage.clear();
   });
 
-  test("inputs actualizan estado", () => {
+  /* -------------------------------------------------------- */
+  it("renderiza inputs y botón de login", () => {
     render(<LoginPage />);
 
-    const email = screen.getByPlaceholderText(/Email/i);
-    const pass = screen.getByPlaceholderText(/Contraseña/i);
-
-    fireEvent.change(email, { target: { value: "test@mail.com" } });
-    fireEvent.change(pass, { target: { value: "1234" } });
-
-    expect(email.value).toBe("test@mail.com");
-    expect(pass.value).toBe("1234");
+    expect(screen.getByPlaceholderText(/Email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Contraseña/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Iniciar Sesión/i })).toBeInTheDocument();
   });
 
-  test("submit sin email -> muestra modal", async () => {
-    render(<LoginPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Iniciar Sesión/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+  /* -------------------------------------------------------- */
+  it("muestra modal cuando credenciales son incorrectas", async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ detail: "Credenciales incorrectas" }),
+      headers: { get: () => "application/json" }
     });
-  });
 
-  test("cerrar modal funciona", async () => {
-    render(<LoginPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Iniciar Sesión/i }));
-
-    const closeButton = await screen.findByText(/Cerrar/i);
-    fireEvent.click(closeButton);
-
-    // Verificamos que el modal desaparezca
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
-    });
-  });
-
-  test("submit válido llama a fetch", async () => {
     render(<LoginPage />);
 
     fireEvent.change(screen.getByPlaceholderText(/Email/i), {
-      target: { value: "valid@mail.com" },
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: "123" },
     });
 
+    fireEvent.click(screen.getByRole("button", { name: /Iniciar Sesión/i }));
+
+    expect(
+      await screen.findByText("Credenciales incorrectas")
+    ).toBeInTheDocument();
+  });
+
+  /* -------------------------------------------------------- */
+  it("login ADMIN navega a /admin/prestadores y guarda id", async () => {
+    // 1) Login OK → devuelve token admin
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: ADMIN_JWT }),
+      headers: { get: () => "application/json" }
+    });
+
+    // 2) findAdminByEmail → devuelve admin
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 99, nombre: "Martina", email: "test@test.com" }],
+      headers: { get: () => "application/json" }
+    });
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "test@test.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
+      target: { value: "123" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Iniciar Sesión/i }));
+
+    // espera token
+    await waitFor(() =>
+      expect(localStorage.getItem("token")).toBe(ADMIN_JWT)
+    );
+
+    // role correcto
+    expect(localStorage.getItem("role")).toBe("admin");
+
+    // id correcto
+    expect(localStorage.getItem("id")).toBe("99");
+
+    // navegación
+    expect(mockNavigate).toHaveBeenCalledWith("/admin/prestadores", {
+      replace: true,
+    });
+  });
+
+  /* -------------------------------------------------------- */
+  it("login PRESTADOR navega a /solicitudes y guarda prestador_id", async () => {
+    // 1) Login OK → token prestador
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: PRESTADOR_JWT }),
+      headers: { get: () => "application/json" }
+    });
+
+    // 2) findPrestadorByEmail → prestador encontrado
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 10, nombre: "Pepe", email: "p@p.com" }],
+      headers: { get: () => "application/json" }
+    });
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Email/i), {
+      target: { value: "p@p.com" },
+    });
     fireEvent.change(screen.getByPlaceholderText(/Contraseña/i), {
       target: { value: "123" },
     });
@@ -90,7 +160,15 @@ describe("LoginPage cobertura mejorada sin errores", () => {
     fireEvent.click(screen.getByRole("button", { name: /Iniciar Sesión/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(localStorage.getItem("token")).toBe(PRESTADOR_JWT);
+    });
+
+    expect(localStorage.getItem("role")).toBe("prestador");
+    expect(localStorage.getItem("prestador_id")).toBe("10");
+
+    expect(mockNavigate).toHaveBeenCalledWith("/solicitudes", {
+      replace: true,
     });
   });
+
 });
