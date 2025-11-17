@@ -275,6 +275,8 @@ const handleSubmit = async (e) => {
           <input type="text" name="piso" placeholder="Piso (opcional)" value={formData.piso} onChange={handleChange} maxLength={MAX.piso} inputMode="numeric" />
           <input type="text" name="departamento" placeholder="Departamento (opcional)" value={formData.departamento} onChange={handleChange} maxLength={MAX.departamento} />
 
+
+<div className="password-full">
           <PasswordInput
             name="password"
             placeholder="Contraseña"
@@ -286,7 +288,7 @@ const handleSubmit = async (e) => {
               reveal ? <IconEyeOff size={18} /> : <IconEye size={18} />
             }
             styles={{
-              input: { borderRadius: "8px", height: "57px" },
+              input: { borderRadius: "8px", height: "57px", marginBottom: "35px" },
               visibilityToggle: { right: "10px" },
             }}
           />
@@ -306,7 +308,7 @@ const handleSubmit = async (e) => {
               visibilityToggle: { right: "10px" },
             }}
           />
-
+          </div>
 
           <div className="btn-container">
             <button type="submit" className="btn btn-primary">

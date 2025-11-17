@@ -106,6 +106,10 @@
   grid-template-columns: 1fr; /* Cambiado de repeat(2, 1fr) a 1fr */
   gap: 20px;
 }
+.form-grid input[name="departamento"],
+.form-grid .password-full {
+  grid-column: span 2;
+}
 
 /* Inputs y select iguales */
 .form-grid input,
@@ -129,7 +133,6 @@
 }
 
 
-
 /* Botones */
 .btn-container {
   grid-column: span 2;
@@ -144,5 +147,35 @@
     grid-template-columns: 1fr;
   }
 
+}
 
+/* PasswordInput: estilos en focus como los inputs normales */
+.form-grid .mantine-PasswordInput-input:focus {
+  outline: none !important;
+  border-color: #8d6e63 !important;
+  background-color: #fff !important;
+  box-shadow: 0 0 5px rgba(141, 110, 99, 0.3) !important;
+}
+
+/* Para hover, si lo querés igual a los inputs normales */
+.form-grid .mantine-PasswordInput-input:hover {
+  border-color: #8d6e63 !important;
+}
+
+.form-container .mantine-PasswordInput-input {
+  border: none !important;
+  font: inherit !important;
+}
+
+/* Placeholder del PasswordInput */
+.form-container .mantine-PasswordInput-innerInput::placeholder {
+  color: #5d4037d4 !important; /* el color de tus otros inputs */
+  opacity: 1 !important;
+}
+
+/* Texto del PasswordInput */
+.form-container .mantine-PasswordInput-innerInput {
+  color: var(--text) !important;
+  background-color: #f9f9f9 !important;
+  font: inherit !important;
 }
