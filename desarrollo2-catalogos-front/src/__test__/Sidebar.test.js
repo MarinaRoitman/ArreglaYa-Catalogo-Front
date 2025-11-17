@@ -1,71 +1,98 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-
-jest.mock("../components/Sidebar", () => () => (
-<div data-testid="sidebar-mock">
-<h1>Sidebar</h1>
-
-<div>
-    <span role="img" aria-label="avatar">🧑‍💻</span>
-    <p>¡Bienvenid@ Usuario!</p>
-</div>
-
-<nav aria-label="links-principales">
-    <button>Solicitudes</button>
-    <button>Confirmados</button>
-    <button>Realizados</button>
-    <button>Habilidades</button>
-    <button>Ir a Pagos</button>
-</nav>
-
-<footer>
-    <button>Mi Perfil</button>
-    <button>Log out</button>
-</footer>
-
-<div role="dialog" aria-label="modal-logout">
-    <p>¿Seguro que querés cerrar sesión?</p>
-    <button>Cancelar</button>
-    <button>Confirmar</button>
-</div>
-</div>
-));
-
+import "../setupMantineTest";
+import { render, screen, fireEvent } from "../test.utils";
 import Sidebar from "../components/Sidebar";
 
-describe("Sidebar (mock UI completo)", () => {
-it("renderiza avatar, saludo y todos los links principales", () => {
-render(<Sidebar />);
+const mockNavigate = jest.fn();
 
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: "/solicitudes" }),
+}));
 
-expect(screen.getByRole("heading", { name: /Sidebar/i })).toBeInTheDocument();
-expect(screen.getByText(/Bienvenid@ Usuario/i)).toBeInTheDocument();
+jest.mock("../components/LogOut", () => ({
+  __esModule: true,
+  default: ({ opened, onConfirm }) =>
+    opened ? (
+      <div data-testid="logout-modal">
+        <button onClick={onConfirm}>confirmar</button>
+      </div>
+    ) : null,
+}));
 
+beforeEach(() => {
+  Storage.prototype.getItem = jest.fn((key) => {
+    const mockValues = {
+      userName: "Martina",
+      userFoto: "https://foto.com/martina.png",
+      role: "prestador",
+    };
+    return mockValues[key];
+  });
 
-expect(screen.getByRole("button", { name: /Solicitudes/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Confirmados/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Realizados/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Habilidades/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Ir a Pagos/i })).toBeInTheDocument();
-
-
-expect(screen.getByRole("button", { name: /Mi Perfil/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Log out/i })).toBeInTheDocument();
-
-
-expect(screen.getByRole("dialog", { name: /modal-logout/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Confirmar/i })).toBeInTheDocument();
+  Storage.prototype.removeItem = jest.fn();
+  mockNavigate.mockClear();
 });
 
-it("permite interactuar con los botones principales", () => {
-render(<Sidebar />);
+describe("Sidebar", () => {
+  test("muestra el nombre y avatar", () => {
+    render(<Sidebar />);
+    expect(screen.getByText("¡Bienvenid@ Martina!")).toBeInTheDocument();
+  });
 
-fireEvent.click(screen.getByRole("button", { name: /Solicitudes/i }));
-fireEvent.click(screen.getByRole("button", { name: /Mi Perfil/i }));
-fireEvent.click(screen.getByRole("button", { name: /Log out/i }));
+  test("muestra menú del prestador", () => {
+    render(<Sidebar />);
 
-expect(screen.getByRole("button", { name: /Solicitudes/i })).toBeInTheDocument();
-expect(screen.getByRole("button", { name: /Log out/i })).toBeInTheDocument();
-});
+    expect(screen.getByText("Solicitudes")).toBeInTheDocument();
+    expect(screen.getByText("Confirmados")).toBeInTheDocument();
+    expect(screen.getByText("Realizados")).toBeInTheDocument();
+    expect(screen.getByText("Cancelados")).toBeInTheDocument();
+  });
+
+  test("muestra menú admin cuando role=admin", () => {
+    Storage.prototype.getItem = jest.fn((key) => {
+      const mockValues = {
+        userName: "Admin",
+        role: "admin",
+        userFoto: "",
+      };
+      return mockValues[key];
+    });
+
+    render(<Sidebar />);
+
+    expect(screen.getByText("Prestadores")).toBeInTheDocument();
+    expect(screen.getByText("Servicios")).toBeInTheDocument();
+    expect(screen.getByText("Habilidades")).toBeInTheDocument();
+    expect(screen.getByText("Zonas")).toBeInTheDocument();
+    expect(screen.getByText("Vínculos Prestadores")).toBeInTheDocument();
+  });
+
+  test("navega correctamente al tocar un item", () => {
+    render(<Sidebar />);
+
+    fireEvent.click(screen.getByText("Solicitudes"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/solicitudes");
+  });
+
+  test("abre modal de logout", () => {
+    render(<Sidebar />);
+
+    fireEvent.click(screen.getByText("Cerrar Sesión"));
+
+    expect(screen.getByTestId("logout-modal")).toBeInTheDocument();
+  });
+
+  test("ejecuta logout y redirige a login", () => {
+    render(<Sidebar />);
+
+    fireEvent.click(screen.getByText("Cerrar Sesión"));
+
+    fireEvent.click(screen.getByText("confirmar"));
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith("token");
+    expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
+  });
 });

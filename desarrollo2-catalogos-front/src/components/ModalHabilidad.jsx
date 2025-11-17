@@ -36,37 +36,40 @@ const [nombre, setNombre] = useState("");
 const [descripcion, setDescripcion] = useState("");
 
 useEffect(() => {
-if (!opened) return;
+  if (!opened) return;
 
-const fetchData = async () => {
+  const fetchData = async () => {
     try {
-    const data = await listHabilidades();
-    const actualesIds = new Set(habilidadesActuales.map((h) => h.id));
-    setHabilidades(data.filter((h) => !actualesIds.has(h.id)));
+      const data = await listHabilidades();
 
-    const token = localStorage.getItem("token");
+      const actualesIds = new Set(habilidadesActuales.map((h) => h.id));
+      setHabilidades(
+        data.filter((h) => h.activo === true && !actualesIds.has(h.id))
+      );
 
-    // rubros
-    const resRubros = await fetch(`${API_URL}rubros/`, {
+      const token = localStorage.getItem("token");
+
+      // rubros
+      const resRubros = await fetch(`${API_URL}rubros/`, {
         headers: { Authorization: `Bearer ${token}` },
-    });
-    const rubrosData = await resRubros.json();
-    setRubros(
+      });
+      const rubrosData = await resRubros.json();
+      setRubros(
         rubrosData.map((r) => ({ value: String(r.id), label: r.nombre }))
-    );
+      );
     } catch (err) {
-    console.error("Error cargando datos:", err.message);
+      console.error("Error cargando datos:", err.message);
     }
-};
+  };
 
-fetchData();
+  fetchData();
 
-// reset
-setModo("existente");
-setHabilidadId("");
-setIdRubro("");
-setNombre("");
-setDescripcion("");
+  // reset
+  setModo("existente");
+  setHabilidadId("");
+  setIdRubro("");
+  setNombre("");
+  setDescripcion("");
 }, [opened, habilidadesActuales]);
 
 const handleSubmit = async () => {

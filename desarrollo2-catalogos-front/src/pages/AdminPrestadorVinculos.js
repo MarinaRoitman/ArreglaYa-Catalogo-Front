@@ -86,22 +86,26 @@ const [originalEdit, setOriginalEdit] = useState(null);
 // --------- CARGAS ----------
 useEffect(() => {
 const load = async () => {
-    try {
+try {
     setLoading(true);
     setErr("");
+
     const [pres, habs, rubs] = await Promise.all([
-        getPrestadores(),
-        listHabilidades(),
-        listRubros(),
+    getPrestadores(),
+    listHabilidades(),
+    listRubros(),
     ]);
+
     setPrestadores(pres || []);
-    setHabilidadesAll(habs || []);
+
+    setHabilidadesAll((habs || []).filter((h) => h.activo === true));
+
     setRubros(rubs || []);
-    } catch (e) {
+} catch (e) {
     setErr(e?.message || "Error cargando datos");
-    } finally {
+} finally {
     setLoading(false);
-    }
+}
 };
 load();
 }, []);

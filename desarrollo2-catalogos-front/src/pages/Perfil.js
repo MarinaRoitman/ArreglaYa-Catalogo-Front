@@ -188,7 +188,7 @@ const handleChange = (key) => (e) => {
   if (MAX[key]) val = val.slice(0, MAX[key]); // límite de caracteres
 
 // Sanitizado por campo
-  if (["estado", "ciudad", "calle"].includes(key)) val = onlyLetters(val);
+  if (["nombre", "apellido", "estado", "ciudad", "calle"].includes(key)) val = onlyLetters(val);
   if (["numero", "piso", "telefono"].includes(key)) val = onlyDigits(val);
   if (key === "departamento") val = onlyLettersNoSpace(val.toUpperCase());
 

@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Modal, Text, Button, Group, Stack, ThemeIcon, ActionIcon } from "@mantine/core";
+import { Modal, Text, Button, Group, Stack, ThemeIcon} from "@mantine/core";
 import { IconCheck, IconAlertCircle, IconEye, IconEyeOff } from "@tabler/icons-react";
 import { API_URL } from "../Api/api";
 import { getPrestadores } from "../Api/prestadores"; 
 
 import "../../src/Form.css";
+import { PasswordInput } from "@mantine/core";
+
 
 const MAX = {
   nombre: 30,
   apellido: 30,
   email: 30,
   telefono: 10,
-  dni: 8,
+  dni: 10,
   estado: 30,
   ciudad: 30,
   calle: 30,
@@ -24,6 +26,8 @@ const MAX = {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+
+  const [emailExiste, setEmailExiste] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -40,10 +44,6 @@ export default function RegisterPage() {
     password: "",
     repitaContrasena: "",
   });
-
-  // 👁️‍🗨️ Mostrar/ocultar contraseñas
-  const [showPassword, setShowPassword] = useState(false);
-  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
 
   // Modal de feedback
   const [modalOpen, setModalOpen] = useState(false);
@@ -72,37 +72,71 @@ export default function RegisterPage() {
   const onlyLetters = (v) => v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
   const clamp = (v, len) => (typeof v === "string" ? v.slice(0, len) : v);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    let v = value ?? "";
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  let v = value ?? "";
 
-    if (name === "dni" || name === "telefono") {
-      v = onlyDigits(v);
-      v = clamp(v, MAX[name]);
-    } else if (name === "estado" || name === "ciudad") {
-      v = onlyLettersSpaces(v);
-      v = clamp(v, MAX[name]);
-    } else if (name === "numero") {
-      v = onlyDigits(v);
-      v = clamp(v, MAX.numero);
-    } else if (name === "piso") {
-      v = onlyDigits(v);
-      v = clamp(v, MAX.piso);
-    } else if (name === "departamento") {
-      v = onlyLetters(v);
-      v = clamp(v, MAX.departamento);
-    } else if (name === "calle") {
-      v = clamp(v, MAX.calle);
-    } else if (name === "nombre" || name === "apellido") {
-      v = clamp(v, MAX[name]);
-    } else if (name === "email") {
-      v = clamp(v, MAX.email);
-    } else if (name === "password" || name === "repitaContrasena") {
-      v = clamp(v, MAX.password);
-    }
+  if (name === "dni" || name === "telefono") {
+    v = onlyDigits(v);
+    v = clamp(v, MAX[name]);
 
-    setFormData((prev) => ({ ...prev, [name]: v }));
-  };
+  } else if (name === "estado" || name === "ciudad") {
+    v = onlyLettersSpaces(v);
+    v = clamp(v, MAX[name]);
+
+  } else if (name === "numero") {
+    v = onlyDigits(v);
+    v = clamp(v, MAX.numero);
+
+  } else if (name === "piso") {
+    v = onlyDigits(v);
+    v = clamp(v, MAX.piso);
+
+  } else if (name === "departamento") {
+    v = onlyLetters(v);
+    v = clamp(v, MAX.departamento);
+
+  } else if (name === "calle") {
+    v = clamp(v, MAX.calle);
+
+  } else if (name === "nombre" || name === "apellido") {
+    v = onlyLetters(v);
+    v = clamp(v, MAX[name]);
+
+  } else if (name === "email") {
+    v = clamp(v, MAX.email);
+
+    (async () => {
+      try {
+        const prestadores = await getPrestadores();
+
+        const existe = prestadores.some(
+          (p) => p.email?.toLowerCase() === v.trim().toLowerCase()
+        );
+
+        if (existe) {
+          setEmailExiste(true);
+          setModalMsg("El email ya está registrado.");
+          setIsSuccess(false);
+          setModalOpen(true);
+
+        } else {
+          setEmailExiste(false);
+        }
+      } catch (err) {
+        console.warn("Error validando email:", err);
+        setEmailExiste(false);
+      }
+    })();
+  } 
+  
+  else if (name === "password" || name === "repitaContrasena") {
+    v = clamp(v, MAX.password);
+  }
+
+  setFormData((prev) => ({ ...prev, [name]: v }));
+};
+
 
   const fail = (msg) => {
     setModalMsg(msg);
@@ -117,6 +151,7 @@ export default function RegisterPage() {
 
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
     if (!emailOk) return fail("Ingresá un e-mail válido.");
+    if (emailExiste) return fail("El email ya está registrado.");
 
     if (!formData.telefono.trim()) return fail("El teléfono es obligatorio.");
     if (!/^\d+$/.test(formData.telefono)) return fail("El teléfono debe tener solo números.");
@@ -240,46 +275,38 @@ const handleSubmit = async (e) => {
           <input type="text" name="piso" placeholder="Piso (opcional)" value={formData.piso} onChange={handleChange} maxLength={MAX.piso} inputMode="numeric" />
           <input type="text" name="departamento" placeholder="Departamento (opcional)" value={formData.departamento} onChange={handleChange} maxLength={MAX.departamento} />
 
-          {/* Contraseñas con ícono de ojo */}
-          <div className="password-wrapper full-width">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              placeholder="Contraseña"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              maxLength={MAX.password}
-            />
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="eye-icon"
-            >
-              {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
-            </ActionIcon>
-          </div>
+          <PasswordInput
+            name="password"
+            placeholder="Contraseña"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            maxLength={MAX.password}
+            visibilityToggleIcon={({ reveal }) =>
+              reveal ? <IconEyeOff size={18} /> : <IconEye size={18} />
+            }
+            styles={{
+              input: { borderRadius: "8px", height: "57px" },
+              visibilityToggle: { right: "10px" },
+            }}
+          />
 
-          <div className="password-wrapper full-width">
-            <input
-              type={showRepeatPassword ? "text" : "password"}
-              name="repitaContrasena"
-              placeholder="Repita la Contraseña"
-              value={formData.repitaContrasena}
-              onChange={handleChange}
-              required
-              maxLength={MAX.password}
-            />
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              onClick={() => setShowRepeatPassword((prev) => !prev)}
-              className="eye-icon"
-            >
-              {showRepeatPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
-            </ActionIcon>
-          </div>
+          <PasswordInput
+            name="repitaContrasena"
+            placeholder="Repita la contraseña"
+            value={formData.repitaContrasena}
+            onChange={handleChange}
+            required
+            maxLength={MAX.password}
+            visibilityToggleIcon={({ reveal }) =>
+              reveal ? <IconEyeOff size={18} /> : <IconEye size={18} />
+            }
+            styles={{
+              input: { borderRadius: "8px", height: "57px" },
+              visibilityToggle: { right: "10px" },
+            }}
+          />
+
 
           <div className="btn-container">
             <button type="submit" className="btn btn-primary">

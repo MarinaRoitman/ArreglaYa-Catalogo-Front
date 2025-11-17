@@ -1,128 +1,65 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "../test.utils";
+import { render } from "../test.utils";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import RegisterPage from "../pages/RegisterPage";
 import { getPrestadores } from "../Api/prestadores";
-import { act } from "react-dom/test-utils";
+
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate
+}));
 
 jest.mock("../Api/prestadores", () => ({
   getPrestadores: jest.fn(),
 }));
 
-// mock useNavigate
-const mockNavigate = jest.fn();
-
-jest.mock("react-router-dom", () => {
-  const original = jest.requireActual("react-router-dom");
-  return {
-    ...original,
-    useNavigate: () => mockNavigate,
-  };
-});
-
-// mock fetch global
 global.fetch = jest.fn();
 
 describe("RegisterPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockNavigate.mockReset();
   });
 
-  /* -------------------------------------------------- */
-  it("renderiza inputs y botón Guardar", () => {
-    render(<RegisterPage />);
-
-    expect(screen.getByPlaceholderText("Nombre")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Apellido")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Guardar/i })
-    ).toBeInTheDocument();
-  });
-
-  /* -------------------------------------------------- */
-  it("muestra error si falta completar datos", async () => {
-    render(<RegisterPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
-
-    expect(
-      await screen.findByText("El nombre es obligatorio.")
-    ).toBeInTheDocument();
-  });
-
-  /* -------------------------------------------------- */
-  it("muestra error si el email ya está registrado", async () => {
-    getPrestadores.mockResolvedValueOnce([{ email: "test@test.com" }]);
+  test("muestra modal si el email ya existe", async () => {
+    getPrestadores.mockResolvedValue([{ email: "test@gmail.com" }]);
 
     render(<RegisterPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("Nombre"), {
-      target: { value: "Martina" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Apellido"), {
-      target: { value: "Perez" },
-    });
     fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Teléfono"), {
-      target: { value: "12345678" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("DNI"), {
-      target: { value: "12345678" },
+      target: { value: "test@gmail.com" }
     });
 
-    fireEvent.change(screen.getByPlaceholderText("Estado / Provincia"), {
-      target: { value: "Buenos Aires" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Ciudad"), {
-      target: { value: "CABA" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Calle"), {
-      target: { value: "Calle Falsa" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Número/Altura"), {
-      target: { value: "123" },
-    });
-
-    fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
-      target: { value: "Marti123!" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
-      target: { value: "Marti123!" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
-
-    expect(
-      await screen.findByText("El email ya está registrado.")
-    ).toBeInTheDocument();
+    const modalMsg = await screen.findByText("El email ya está registrado.");
+    expect(modalMsg).toBeInTheDocument();
   });
 
-  /* -------------------------------------------------- */
-  it("muestra modal de éxito cuando el registro es exitoso", async () => {
-    getPrestadores.mockResolvedValueOnce([]);
+  test("realiza registro exitoso", async () => {
+    getPrestadores.mockResolvedValue([]);
 
-    fetch.mockResolvedValueOnce({
+    global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ message: "ok" }),
+      json: async () => ({}),
     });
 
-    render(<RegisterPage />);
+    render(<RegisterPage />);  
 
     fireEvent.change(screen.getByPlaceholderText("Nombre"), {
       target: { value: "Martina" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Apellido"), {
-      target: { value: "Perez" },
+      target: { value: "Gomez" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "marti@test.com" },
+      target: { value: "nuevo@gmail.com" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Teléfono"), {
-      target: { value: "12345678" },
+      target: { value: "1234567890" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("DNI"), {
       target: { value: "12345678" },
     });
@@ -130,36 +67,33 @@ describe("RegisterPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Estado / Provincia"), {
       target: { value: "Buenos Aires" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Ciudad"), {
-      target: { value: "CABA" },
+      target: { value: "Quilmes" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Calle"), {
-      target: { value: "Calle Falsa" },
+      target: { value: "Mitre" },
     });
+
     fireEvent.change(screen.getByPlaceholderText("Número/Altura"), {
       target: { value: "123" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
-      target: { value: "Marti123!" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Repita la Contraseña"), {
-      target: { value: "Marti123!" },
+      target: { value: "Pass@1234" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
+    fireEvent.change(screen.getByPlaceholderText("Repita la contraseña"), {
+      target: { value: "Pass@1234" },
+    });
 
-    expect(
-      await screen.findByText("Registro exitoso. Ya podés iniciar sesión.")
-    ).toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByText("Guardar"));
 
-  /* -------------------------------------------------- */
-  it("toggle del ojo de contraseña funciona", () => {
-    render(<RegisterPage />);
+    const successMsg = await screen.findByText(
+      "Registro exitoso. Ya podés iniciar sesión."
+    );
 
-    const buttons = screen.getAllByRole("button");
-    // simplemente chequear que se pueda clickeaar sin romper
-    fireEvent.click(buttons[1]);
+    expect(successMsg).toBeInTheDocument();
   });
 });

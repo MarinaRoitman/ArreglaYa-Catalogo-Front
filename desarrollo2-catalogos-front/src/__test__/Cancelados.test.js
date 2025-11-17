@@ -1,11 +1,10 @@
 import React from "react";
 import "../setupMantineTest";
 import { render, screen } from "../test.utils";
-import Confirmados from "../pages/Confirmados";
+import Cancelados from "../pages/Cancelados";
 
 import * as mantineHooks from "@mantine/hooks";
 jest.spyOn(mantineHooks, "useMediaQuery");
-
 
 jest.mock("../components/LayoutTrabajosPendientes", () => ({ children }) => (
   <div data-testid="layout">{children}</div>
@@ -25,7 +24,7 @@ jest.mock("../components/TableComponent", () => ({ rows }) => (
 
 // ======= TESTS ========
 
-describe("Confirmados", () => {
+describe("Cancelados", () => {
   const data = [
     {
       id: 1,
@@ -47,20 +46,21 @@ describe("Confirmados", () => {
     },
   ];
 
-  test("muestra tabla en desktop", () => {
+  test("renderiza tabla en desktop", () => {
     mantineHooks.useMediaQuery.mockReturnValue(false);
 
-    render(<Confirmados data={data} rechazar={jest.fn()} />);
+    render(<Cancelados data={data} />);
 
     expect(screen.getByTestId("table")).toBeInTheDocument();
     expect(screen.getByText("Martina")).toBeInTheDocument();
     expect(screen.getByText("Juan")).toBeInTheDocument();
   });
 
-  test("muestra mensaje cuando no hay datos", () => {
+
+  test("muestra mensaje cuando no hay resultados", () => {
     mantineHooks.useMediaQuery.mockReturnValue(false);
 
-    render(<Confirmados data={[]} rechazar={jest.fn()} />);
+    render(<Cancelados data={[]} />);
 
     expect(screen.getByText("No se encontraron resultados")).toBeInTheDocument();
   });
@@ -68,8 +68,8 @@ describe("Confirmados", () => {
   test("muestra el título correctamente", () => {
     mantineHooks.useMediaQuery.mockReturnValue(false);
 
-    render(<Confirmados data={data} rechazar={jest.fn()} />);
+    render(<Cancelados data={data} />);
 
-    expect(screen.getByText("Trabajos Confirmados")).toBeInTheDocument();
+    expect(screen.getByText("Trabajos Cancelados")).toBeInTheDocument();
   });
 });

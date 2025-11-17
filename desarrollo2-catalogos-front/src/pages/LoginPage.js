@@ -12,6 +12,9 @@ import {
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { API_URL } from "../Api/api";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import { TextInput, PasswordInput } from "@mantine/core";
+
 
 const HARD_RELOAD_AFTER_LOGIN = false;
 
@@ -231,24 +234,56 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            name="usuario"
-            placeholder="Email"
-            value={formData.usuario}
-            onChange={handleChange}
-            required
-            autoComplete="username"
-          />
-          <input
-            type="password"
-            name="contrasena"
-            placeholder="Contraseña"
-            value={formData.contrasena}
-            onChange={handleChange}
-            required
-            autoComplete="current-password"
-          />
+        <TextInput
+          name="usuario"
+          type="email"
+          placeholder="Email"
+          value={formData.usuario}
+          onChange={handleChange}
+          required
+          autoComplete="username"
+          styles={{
+            input: {
+              borderRadius: "8px",
+              height: "57px",
+              padding: "15px",
+              backgroundColor: "var(--input-bg)",
+              border: "1px solid var(--input-border)",
+              color: "var(--text)",
+              fontSize: "16px",
+            },
+          }}
+        />
+
+       <PasswordInput
+        name="contrasena"
+        placeholder="Contraseña"
+        value={formData.contrasena}
+        onChange={handleChange}
+        required
+        autoComplete="current-password"
+        visibilityToggleIcon={({ reveal }) =>
+          reveal ? <IconEyeOff size={18} /> : <IconEye size={18} />
+        }
+        styles={{
+          root: {
+            width: "100%",
+          },
+          input: {
+            border: "none", 
+            height: "55px",
+            paddingLeft: "15px",
+            paddingRight: "40px",
+            backgroundColor: "transparent",
+            color: "var(--text)",
+            fontSize: "16px",
+          },
+          visibilityToggle: {
+            right: "10px",
+          },
+        }}
+      />
+
 
           <div className="btn-container">
             <button type="submit" className="btn btn-primary">

@@ -1,41 +1,75 @@
-// src/__test__/Realizados.test.js
-
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import "../setupMantineTest";
+import { render, screen } from "../test.utils";
+import Realizados from "../pages/Realizados";
 
-// Mock del componente para imitar su estructura
-jest.mock("../pages/Realizados", () => () => (
-  <div data-testid="realizados-mock">
-    <h1>Trabajos Realizados</h1>
-    <section aria-label="filtros">
-      <input placeholder="Filtrar por Fecha y Hora" />
-      <input placeholder="Filtrar por Servicio" />
-    </section>
-    <section aria-label="tabla-realizados">
-        {/* Simulamos una fila de la tabla */}
-        <div>
-            <span>Luis Rodríguez</span>
-            <span>Finalizado</span>
-        </div>
-    </section>
+import * as mantineHooks from "@mantine/hooks";
+jest.spyOn(mantineHooks, "useMediaQuery");
+
+
+jest.mock("../components/LayoutTrabajosPendientes", () => ({ children }) => (
+  <div data-testid="layout">{children}</div>
+));
+
+jest.mock("../components/Filterbar", () => () => (
+  <div data-testid="filterbar">Filterbar</div>
+));
+
+jest.mock("../components/TableComponent", () => ({ rows }) => (
+  <div data-testid="table">
+    {rows.map((r) => (
+      <div key={r.id}>{r.nombre}</div>
+    ))}
   </div>
 ));
 
-import Realizados from "../pages/Realizados";
+// ======= TESTS ========
 
-describe("Realizados Page (mock UI)", () => {
-  it("renderiza el título, filtros y la tabla de trabajos finalizados", () => {
-    render(<Realizados />);
+describe("Realizados", () => {
+  const data = [
+    {
+      id: 1,
+      nombre: "Martina",
+      telefono: "123",
+      direccion: "Calle 1",
+      fechaHora: "2025-01-01",
+      servicio: "Plomería",
+      habilidad: "Reparación",
+    },
+    {
+      id: 2,
+      nombre: "Juan",
+      telefono: "555",
+      direccion: "Calle 2",
+      fechaHora: "2025-01-02",
+      servicio: "Gas",
+      habilidad: "Instalación",
+    },
+  ];
 
-    // Título
-    expect(screen.getByRole("heading", { name: /Trabajos Realizados/i })).toBeInTheDocument();
+  test("renderiza tabla en desktop", () => {
+    mantineHooks.useMediaQuery.mockReturnValue(false);
 
-    // Filtros
-    expect(screen.getByPlaceholderText(/Filtrar por Fecha y Hora/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Filtrar por Servicio/i)).toBeInTheDocument();
+    render(<Realizados data={data} />);
 
-    // Contenido simulado
-    expect(screen.getByText(/Luis Rodríguez/i)).toBeInTheDocument();
-    expect(screen.getByText(/Finalizado/i)).toBeInTheDocument();
+    expect(screen.getByTestId("table")).toBeInTheDocument();
+    expect(screen.getByText("Martina")).toBeInTheDocument();
+    expect(screen.getByText("Juan")).toBeInTheDocument();
+  });
+
+  test("muestra mensaje cuando no hay resultados", () => {
+    mantineHooks.useMediaQuery.mockReturnValue(false);
+
+    render(<Realizados data={[]} />);
+
+    expect(screen.getByText("No se encontraron resultados")).toBeInTheDocument();
+  });
+
+  test("muestra el título correctamente", () => {
+    mantineHooks.useMediaQuery.mockReturnValue(false);
+
+    render(<Realizados data={data} />);
+
+    expect(screen.getByText("Trabajos Realizados")).toBeInTheDocument();
   });
 });

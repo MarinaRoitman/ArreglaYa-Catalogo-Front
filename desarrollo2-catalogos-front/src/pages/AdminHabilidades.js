@@ -36,19 +36,34 @@ return m;
 };
 
 const fetchAll = useCallback(async () => {
-try {
-    setErr(""); setLoading(true);
-    const [habs, rubros] = await Promise.all([listHabilidades(), listRubros()]);
-    const opts = (rubros || []).map(r => ({ value: String(r.id), label: r.nombre }));
-    setHabilidades(Array.isArray(habs) ? habs : []);
+  try {
+    setErr("");
+    setLoading(true);
+
+    const [habs, rubros] = await Promise.all([
+      listHabilidades(),
+      listRubros()
+    ]);
+
+    const opts = (rubros || []).map(r => ({
+      value: String(r.id),
+      label: r.nombre
+    }));
+
+    const activas = Array.isArray(habs)
+      ? habs.filter(h => h.activo === true)
+      : [];
+
+    setHabilidades(activas);
     setRubrosOpts(opts);
     setRubrosMap(buildRubrosMap(opts));
-} catch (e) {
+
+  } catch (e) {
     console.error(e);
     setErr(e?.message || "No se pudieron cargar habilidades/rubros");
-} finally {
+  } finally {
     setLoading(false);
-}
+  }
 }, []);
 
 useEffect(() => { fetchAll(); }, [fetchAll]);
