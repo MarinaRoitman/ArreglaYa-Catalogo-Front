@@ -80,9 +80,9 @@ const [errors, setErrors] = useState({
 });
 
 const MAX = {
-  nombre: 30,
-  apellido: 30,
-  email: 30,
+  nombre: 40,
+  apellido: 40,
+  email:40,
   telefono: 10,
   estado: 30,
   ciudad: 30,
@@ -282,6 +282,9 @@ const handleSubmit = async () => {
     if (hasFormChanges || hasFotoChange) {
       await updatePrestador(prestadorId, payload);
       setOriginalForm({ ...form });
+
+      localStorage.setItem("userName", payload.nombre);
+
       if (hasFotoChange) {
         setFotoUrl(payload.foto);
         setFotoFile(null);

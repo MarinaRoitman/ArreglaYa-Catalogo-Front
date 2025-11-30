@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Text, Paper } from "@mantine/core";
+import { Text, Paper, Button } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
@@ -7,8 +7,9 @@ import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
 import ConfirmDelete from "../components/ModalBorrar";
 import ModalCotizar from "../components/ModalCotizar";
+import { IconRefresh } from "@tabler/icons-react";
 
-export default function Solicitudes({ data, aprobar, rechazar }) {
+export default function Solicitudes({ data, aprobar, rechazar, recargar }) {
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
@@ -56,7 +57,26 @@ export default function Solicitudes({ data, aprobar, rechazar }) {
       withBorder radius="lg" shadow="sm"
       style={{background: "--app-bg"}}
       >
-        <Text fw={700} fz="xl" mb="md" ta="center">Solicitudes</Text>
+
+    <div style={{ position: "relative", marginBottom: 16 }}>
+        <Text fw={700} fz="xl" ta="center">
+            Solicitudes
+        </Text>
+        <Button
+            onClick={recargar}
+            leftSection={<IconRefresh size={16} />}
+            style={{
+            position: "absolute",
+            right: 0,           
+            top: "50%",
+            transform: "translateY(-50%)",
+            backgroundColor: "#b67747ff",
+            }}
+        >
+            Recargar
+        </Button>
+    </div>
+
         <Filterbar {...{ fNombre, setFNombre, fTel, setFTel, fDir, setFDir, fFecha, setFFecha, fServ, setFServ, fHab, setFHab }} />
         {filteredData.length === 0 ? (
           <Text ta="center" mt="lg" c="dimmed">No se encontraron resultados</Text>

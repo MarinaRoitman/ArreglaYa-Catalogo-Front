@@ -96,10 +96,15 @@ try {
     listRubros(),
     ]);
 
-    setPrestadores(pres || []);
+    // Filtra prestadores activos
+    const activos = (pres || []).filter((p) => {
+    const v = p?.activo;
+    return v === 1 || v === true || v === "1" || v === "true";
+    });
+
+    setPrestadores(activos);
 
     setHabilidadesAll((habs || []).filter((h) => h.activo === true));
-
     setRubros(rubs || []);
 } catch (e) {
     setErr(e?.message || "Error cargando datos");
@@ -109,6 +114,7 @@ try {
 };
 load();
 }, []);
+
 
 const fetchPrestador = useCallback(async (id) => {
 if (!id) return;

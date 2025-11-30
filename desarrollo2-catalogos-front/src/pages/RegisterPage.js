@@ -10,9 +10,9 @@ import { PasswordInput } from "@mantine/core";
 
 
 const MAX = {
-  nombre: 30,
-  apellido: 30,
-  email: 30,
+  nombre: 40,
+  apellido: 40,
+  email: 40,
   telefono: 10,
   dni: 10,
   estado: 30,
@@ -23,6 +23,34 @@ const MAX = {
   departamento: 2,
   password: 50,
 };
+
+const PROVINCIAS = [
+  "Buenos Aires",
+  "CABA",
+  "Catamarca",
+  "Chaco",
+  "Chubut",
+  "Córdoba",
+  "Corrientes",
+  "Entre Ríos",
+  "Formosa",
+  "Jujuy",
+  "La Pampa",
+  "La Rioja",
+  "Mendoza",
+  "Misiones",
+  "Neuquén",
+  "Río Negro",
+  "Salta",
+  "San Juan",
+  "San Luis",
+  "Santa Cruz",
+  "Santa Fe",
+  "Santiago del Estero",
+  "Tierra del Fuego",
+  "Tucumán",
+];
+
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -80,9 +108,12 @@ const handleChange = (e) => {
     v = onlyDigits(v);
     v = clamp(v, MAX[name]);
 
-  } else if (name === "estado" || name === "ciudad") {
+  } else if (name === "estado") {
+    v = clamp(v, MAX.estado);
+
+  } else if (name === "ciudad") {
     v = onlyLettersSpaces(v);
-    v = clamp(v, MAX[name]);
+    v = clamp(v, MAX.ciudad);
 
   } else if (name === "numero") {
     v = onlyDigits(v);
@@ -158,8 +189,7 @@ const handleChange = (e) => {
     if (!formData.dni.trim()) return fail("El DNI es obligatorio.");
     if (!/^\d+$/.test(formData.dni)) return fail("El DNI debe tener solo números.");
 
-    if (!formData.estado.trim()) return fail("El estado/provincia es obligatorio.");
-    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(formData.estado)) return fail("Estado: solo letras y espacios.");
+    if (!formData.estado.trim()) return fail("La provincia es obligatoria.");
 
     if (!formData.ciudad.trim()) return fail("La ciudad es obligatoria.");
     if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(formData.ciudad)) return fail("Ciudad: solo letras y espacios.");
@@ -268,7 +298,19 @@ const handleSubmit = async (e) => {
           <input type="text" name="dni" placeholder="DNI" value={formData.dni} onChange={handleChange} required maxLength={MAX.dni} inputMode="numeric" />
 
           {/* Dirección */}
-          <input type="text" name="estado" placeholder="Estado / Provincia" value={formData.estado} onChange={handleChange} required maxLength={MAX.estado} />
+          <select
+            name="estado"
+            value={formData.estado}
+            onChange={handleChange}
+            required
+            className="custom-select"
+          >
+            <option value="">Seleccioná una provincia</option>
+            {PROVINCIAS.map((prov) => (
+              <option key={prov} value={prov}>{prov}</option>
+            ))}
+          </select>
+
           <input type="text" name="ciudad" placeholder="Ciudad" value={formData.ciudad} onChange={handleChange} required maxLength={MAX.ciudad} />
           <input type="text" name="calle" placeholder="Calle" value={formData.calle} onChange={handleChange} required maxLength={MAX.calle} />
           <input type="text" name="numero" placeholder="Número/Altura" value={formData.numero} onChange={handleChange} required maxLength={MAX.numero} inputMode="numeric" />

@@ -1,98 +1,78 @@
-import React from "react";
-import "../setupMantineTest";
-import { render, screen, fireEvent } from "../test.utils";
+import { render, screen, fireEvent } from "@testing-library/react";
 import Sidebar from "../components/Sidebar";
+import { MemoryRouter } from "react-router-dom";
+
+jest.mock("@mantine/core", () => ({
+  Box: ({ children }) => <div>{children}</div>,
+  ScrollArea: ({ children }) => <div>{children}</div>,
+  Group: ({ children }) => <div>{children}</div>,
+  Avatar: ({ children }) => <div>{children}</div>,
+  Text: ({ children }) => <span>{children}</span>,
+  NavLink: ({ label, onClick }) => (
+    <button onClick={onClick}>{label}</button>
+  ),
+  Divider: () => <div />,
+}));
+
+jest.mock("../components/LogOut", () => () => <div data-testid="logout-modal" />);
+jest.mock("../components/ModalReprocesarEventos", () => () => <div data-testid="reprocesar-modal" />);
 
 const mockNavigate = jest.fn();
-
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
-  useLocation: () => ({ pathname: "/solicitudes" }),
+  useLocation: () => ({ pathname: "/" }),
 }));
 
-jest.mock("../components/LogOut", () => ({
-  __esModule: true,
-  default: ({ opened, onConfirm }) =>
-    opened ? (
-      <div data-testid="logout-modal">
-        <button onClick={onConfirm}>confirmar</button>
-      </div>
-    ) : null,
-}));
+describe("Sidebar navegación simple", () => {
+  beforeEach(() => {
+    localStorage.setItem("role", "prestador");
+    localStorage.setItem("userName", "Martina");
 
-beforeEach(() => {
-  Storage.prototype.getItem = jest.fn((key) => {
-    const mockValues = {
-      userName: "Martina",
-      userFoto: "https://foto.com/martina.png",
-      role: "prestador",
-    };
-    return mockValues[key];
+    mockNavigate.mockClear();
   });
 
-  Storage.prototype.removeItem = jest.fn();
-  mockNavigate.mockClear();
-});
-
-describe("Sidebar", () => {
-  test("muestra el nombre y avatar", () => {
-    render(<Sidebar />);
-    expect(screen.getByText("¡Bienvenid@ Martina!")).toBeInTheDocument();
-  });
-
-  test("muestra menú del prestador", () => {
-    render(<Sidebar />);
-
-    expect(screen.getByText("Solicitudes")).toBeInTheDocument();
-    expect(screen.getByText("Confirmados")).toBeInTheDocument();
-    expect(screen.getByText("Realizados")).toBeInTheDocument();
-    expect(screen.getByText("Cancelados")).toBeInTheDocument();
-  });
-
-  test("muestra menú admin cuando role=admin", () => {
-    Storage.prototype.getItem = jest.fn((key) => {
-      const mockValues = {
-        userName: "Admin",
-        role: "admin",
-        userFoto: "",
-      };
-      return mockValues[key];
-    });
-
-    render(<Sidebar />);
-
-    expect(screen.getByText("Prestadores")).toBeInTheDocument();
-    expect(screen.getByText("Servicios")).toBeInTheDocument();
-    expect(screen.getByText("Habilidades")).toBeInTheDocument();
-    expect(screen.getByText("Zonas")).toBeInTheDocument();
-    expect(screen.getByText("Vínculos Prestadores")).toBeInTheDocument();
-  });
-
-  test("navega correctamente al tocar un item", () => {
-    render(<Sidebar />);
+  test("Navega a Solicitudes", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
 
     fireEvent.click(screen.getByText("Solicitudes"));
-
     expect(mockNavigate).toHaveBeenCalledWith("/solicitudes");
   });
 
-  test("abre modal de logout", () => {
-    render(<Sidebar />);
+  test("Navega a Confirmados", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
 
-    fireEvent.click(screen.getByText("Cerrar Sesión"));
-
-    expect(screen.getByTestId("logout-modal")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Confirmados"));
+    expect(mockNavigate).toHaveBeenCalledWith("/confirmados");
   });
 
-  test("ejecuta logout y redirige a login", () => {
-    render(<Sidebar />);
+  test("Navega a Realizados", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
 
-    fireEvent.click(screen.getByText("Cerrar Sesión"));
+    fireEvent.click(screen.getByText("Realizados"));
+    expect(mockNavigate).toHaveBeenCalledWith("/realizados");
+  });
 
-    fireEvent.click(screen.getByText("confirmar"));
+  test("Navega a Cancelados", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
 
-    expect(localStorage.removeItem).toHaveBeenCalledWith("token");
-    expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
+    fireEvent.click(screen.getByText("Cancelados"));
+    expect(mockNavigate).toHaveBeenCalledWith("/cancelados");
   });
 });

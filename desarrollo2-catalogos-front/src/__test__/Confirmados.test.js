@@ -70,6 +70,6 @@ describe("Confirmados", () => {
 
     render(<Confirmados data={data} rechazar={jest.fn()} />);
 
-    expect(screen.getByText("Trabajos Confirmados")).toBeInTheDocument();
+    expect(screen.getByText("Confirmados")).toBeInTheDocument();
   });
 });

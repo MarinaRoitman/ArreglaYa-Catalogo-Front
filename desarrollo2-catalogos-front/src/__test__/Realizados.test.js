@@ -70,6 +70,6 @@ describe("Realizados", () => {
 
     render(<Realizados data={data} />);
 
-    expect(screen.getByText("Trabajos Realizados")).toBeInTheDocument();
+    expect(screen.getByText("Realizados")).toBeInTheDocument();
   });
 });

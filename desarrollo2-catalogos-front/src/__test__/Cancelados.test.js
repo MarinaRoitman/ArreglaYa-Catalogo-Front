@@ -70,6 +70,6 @@ describe("Cancelados", () => {
 
     render(<Cancelados data={data} />);
 
-    expect(screen.getByText("Trabajos Cancelados")).toBeInTheDocument();
+    expect(screen.getByText("Cancelados")).toBeInTheDocument();
   });
 });

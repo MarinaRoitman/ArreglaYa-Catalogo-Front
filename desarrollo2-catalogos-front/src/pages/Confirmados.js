@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from "react"; 
-import { Text, Paper } from "@mantine/core";
+import { Text, Paper, Button } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
 import Filterbar from "../components/Filterbar";
 import TableComponent from "../components/TableComponent";
 import CardsMobile from "../components/CardsMobile";
+import { IconRefresh } from "@tabler/icons-react";
+
 // import ConfirmDelete from "../components/ModalBorrar"; // 🔸 Comentado para desactivar el modal
 
-export default function Confirmados({ data, rechazar }) {
+export default function Confirmados({ data, rechazar, recargar }) {
   const [fNombre, setFNombre] = useState("");
   const [fTel, setFTel] = useState("");
   const [fDir, setFDir] = useState("");
@@ -62,9 +64,26 @@ export default function Confirmados({ data, rechazar }) {
         shadow="sm"
         style={{ background: "--app-bg" }}
       >
-        <Text fw={700} fz="xl" mb="md" ta="center">
-          Trabajos Confirmados
+
+    <div style={{ position: "relative", marginBottom: 16 }}>
+        <Text fw={700} fz="xl" ta="center">
+            Confirmados
         </Text>
+
+        <Button
+            onClick={recargar}
+            leftSection={<IconRefresh size={16} />}
+            style={{
+            position: "absolute",
+            right: 0,           
+            top: "50%",
+            transform: "translateY(-50%)",
+            backgroundColor: "#b67747ff",
+            }}
+        >
+            Recargar
+        </Button>
+    </div>
 
         <Filterbar
           {...{

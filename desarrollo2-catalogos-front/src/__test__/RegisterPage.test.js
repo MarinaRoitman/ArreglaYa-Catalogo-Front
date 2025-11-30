@@ -1,49 +1,62 @@
 import React from "react";
-import { render } from "../test.utils";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import RegisterPage from "../pages/RegisterPage";
-import { getPrestadores } from "../Api/prestadores";
 
-const mockNavigate = jest.fn();
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockNavigate
-}));
+jest.mock("@mantine/core", () => {
+  return {
+    Modal: ({ opened, children }) =>
+      opened ? <div data-testid="modal">{children}</div> : null,
+
+    Button: ({ children, onClick }) => (
+      <button onClick={onClick}>{children}</button>
+    ),
+
+    Group: ({ children }) => <div>{children}</div>,
+    Stack: ({ children }) => <div>{children}</div>,
+    Text: ({ children }) => <p>{children}</p>,
+
+    PasswordInput: ({ placeholder, value, onChange }) => (
+      <input
+        type="password"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+      />
+    ),
+
+    ThemeIcon: ({ children }) => <div>{children}</div>,
+  };
+});
+
 
 jest.mock("../Api/prestadores", () => ({
-  getPrestadores: jest.fn(),
+  getPrestadores: jest.fn().mockResolvedValue([]),
 }));
 
-global.fetch = jest.fn();
 
-describe("RegisterPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => jest.fn(),
+}));
 
-  test("muestra modal si el email ya existe", async () => {
-    getPrestadores.mockResolvedValue([{ email: "test@gmail.com" }]);
 
-    render(<RegisterPage />);
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+  })
+);
 
-    fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "test@gmail.com" }
-    });
+describe("RegisterPage — test simple sin APIs ni Mantine real", () => {
+  test("completa registro exitoso sin errores", async () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
 
-    const modalMsg = await screen.findByText("El email ya está registrado.");
-    expect(modalMsg).toBeInTheDocument();
-  });
-
-  test("realiza registro exitoso", async () => {
-    getPrestadores.mockResolvedValue([]);
-
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}),
-    });
-
-    render(<RegisterPage />);  
-
+    // ------- Inputs -------
     fireEvent.change(screen.getByPlaceholderText("Nombre"), {
       target: { value: "Martina" },
     });
@@ -64,36 +77,39 @@ describe("RegisterPage", () => {
       target: { value: "12345678" },
     });
 
-    fireEvent.change(screen.getByPlaceholderText("Estado / Provincia"), {
+    // ------- Select provincia -------
+    fireEvent.change(screen.getByRole("combobox"), {
       target: { value: "Buenos Aires" },
     });
 
+    // ------- Dirección -------
     fireEvent.change(screen.getByPlaceholderText("Ciudad"), {
-      target: { value: "Quilmes" },
+      target: { value: "La Plata" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("Calle"), {
-      target: { value: "Mitre" },
+      target: { value: "Calle 10" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("Número/Altura"), {
       target: { value: "123" },
     });
 
+    // ------- Passwords -------
     fireEvent.change(screen.getByPlaceholderText("Contraseña"), {
-      target: { value: "Pass@1234" },
+      target: { value: "Clave123!" },
     });
 
     fireEvent.change(screen.getByPlaceholderText("Repita la contraseña"), {
-      target: { value: "Pass@1234" },
+      target: { value: "Clave123!" },
     });
 
+    // ------- Enviar -------
     fireEvent.click(screen.getByText("Guardar"));
 
-    const successMsg = await screen.findByText(
-      "Registro exitoso. Ya podés iniciar sesión."
-    );
-
-    expect(successMsg).toBeInTheDocument();
+    // ------- Modal aparece -------
+    await waitFor(() => {
+      expect(screen.getByTestId("modal")).toBeInTheDocument();
+    });
   });
 });

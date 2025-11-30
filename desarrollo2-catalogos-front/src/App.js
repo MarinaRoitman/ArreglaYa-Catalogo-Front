@@ -286,6 +286,7 @@ const realizadosData = jobs.filter((job) => {
               data={solicitudesData}
               aprobar={profesionalEnviaPresupuesto}
               rechazar={rechazarSolicitud}
+              recargar={fetchJobs}
             />
           </PrivateRoute>
         }
@@ -297,6 +298,7 @@ const realizadosData = jobs.filter((job) => {
             <Confirmados
               data={confirmadosData}
               rechazar={rechazarSolicitud}
+              recargar={fetchJobs}
             />
           </PrivateRoute>
         }
@@ -305,7 +307,10 @@ const realizadosData = jobs.filter((job) => {
         path="/realizados"
         element={
           <PrivateRoute>
-            <Realizados data={realizadosData} />
+            <Realizados 
+            data={realizadosData} 
+            recargar={fetchJobs}
+            />
           </PrivateRoute>
         }
       />
@@ -335,10 +340,13 @@ const realizadosData = jobs.filter((job) => {
       />
       <Route 
         path="/cancelados" 
-        element={<PrivateRoute>
+        element={
+        <PrivateRoute>
           <Cancelados 
-        data={canceladosData} 
-        /></PrivateRoute>} 
+          data={canceladosData} 
+          recargar={fetchJobs}
+        />
+        </PrivateRoute>} 
       />
     </Routes>
   </div>

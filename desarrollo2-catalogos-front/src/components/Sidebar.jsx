@@ -13,9 +13,13 @@ import {
   IconTool,
   IconMapPin,
   IconCircleXFilled,
+  IconReload,
 } from "@tabler/icons-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ConfirmLogoutModal from "./LogOut";
+import ModalReprocesarEventos from "./ModalReprocesarEventos";
+import { crearEvento } from "../Api/procesarEvento";
+
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -24,7 +28,8 @@ export default function Sidebar() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   const userName = localStorage.getItem("userName") || "Usuario";
   const userFoto = localStorage.getItem("userFoto"); // 1. Leemos la URL de la foto
@@ -113,7 +118,36 @@ export default function Sidebar() {
                 active={pathname.startsWith("/admin/vinculos")}
                 color="#b67747ff"
               />
+              <NavLink
+                label="Re-procesar Eventos"
+                leftSection={<IconReload size={18} />}
+                mt="xs"
+                color="#b67747ff"
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+
+                    const res = await crearEvento();
+
+                    // Si el backend devuelve { message: "Reprocesamiento de eventos..." }
+                    const mensaje =
+                      (typeof res === "object" && res.message) ||
+                      "Reprocesamiento iniciado.";
+
+                    setModalMessage(mensaje);
+                    setModalOpen(true);
+
+                  } catch (err) {
+                    console.error(err);
+                    setModalMessage("Error al re-procesar eventos.");
+                    setModalOpen(true);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              />
             </>
+
           ) : (
             // ====== MENÚ PRESTADOR (TU MENÚ ORIGINAL) ======
             <>
@@ -207,6 +241,12 @@ export default function Sidebar() {
         onConfirm={doLogout}
         loading={loading}
       />
+      <ModalReprocesarEventos
+        opened={modalOpen}
+        onClose={() => setModalOpen(false)}
+        message={modalMessage}
+      />
+
     </Box>
   );
 }
