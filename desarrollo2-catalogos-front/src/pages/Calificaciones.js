@@ -5,7 +5,6 @@ Box,
 Text,
 Group,
 Rating,
-Avatar,
 LoadingOverlay,
 Alert,
 Divider,
@@ -13,7 +12,6 @@ TextInput,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import AppLayout from "../components/LayoutTrabajosPendientes";
-
 import { listCalificaciones } from "../Api/calificacion";
 import { getUsuarioById } from "../Api/usuarios";
 
@@ -151,43 +149,45 @@ return (
         ) : (
         reviewsFiltradas.map((r) => (
             <Box
-            key={r.id}
-            mb="md"
-            pb="md"
-            style={{ borderBottom: "1px solid var(--input-border)" }}
-            >
-            <Group gap="sm" wrap="nowrap">
-                <Avatar radius="xl" color="#93755E">
-                {r.nombre_usuario ? r.nombre_usuario[0] : "U"}
-                </Avatar>
-                <Box style={{ flex: 1, minWidth: 0 }}>
-                <Group justify="space-between" align="center">
-                    <Text
-                    fw={600}
-                    style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                    }}
-                    >
-                    {r.nombre_usuario || "Usuario"}
+                key={r.id}
+                mb="lg"
+                p="md"
+                style={{
+                    borderRadius: 12,
+                    background: "var(--input-bg)",
+                    border: "1px solid var(--input-border)",
+                }}
+                >
+                <Group gap="md" wrap="nowrap" align="flex-start">
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Group justify="space-between" align="center" mb={6}>
+                        <Text
+                        fw={600}
+                        style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontSize: 16,
+                        }}
+                        >
+                        {r.nombre_usuario || "Usuario"}
+                        </Text>
+
+                        <Rating
+                        value={normRating(r.estrellas)}
+                        readOnly
+                        size="sm"
+                        fractions={10}
+                        />
+                    </Group>
+
+                    <Text fz="sm" c="dimmed" style={{ lineHeight: 1.4 }}>
+                        {r.descripcion?.trim() || "Sin comentario"}
                     </Text>
-
-                    {/* Estrellas por reseña con fracciones */}
-                    <Rating
-                    value={normRating(r.estrellas)}
-                    readOnly
-                    size="sm"
-                    fractions={10}
-                    />
+                    </Box>
                 </Group>
-
-                <Text fz="sm" c="dimmed" mt={4}>
-                    {r.descripcion?.trim() || "Sin comentario"}
-                </Text>
                 </Box>
-            </Group>
-            </Box>
+
         ))
         )}
     </Box>

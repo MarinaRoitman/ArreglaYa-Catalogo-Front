@@ -57,19 +57,9 @@ function normalizeAdmin(raw = {}) {
     "";
 
   const email = raw.email ?? raw.correo ?? raw.mail ?? "";
-
-  const foto =
-    raw.foto ??
-    raw.foto_url ??
-    raw.fotoUrl ??
-    raw.avatar ??
-    raw.imagen ??
-    raw.image ??
-    "";
-
   const id = raw.id ?? raw.id_admin ?? raw.admin_id ?? null;
 
-  return { id, nombre, apellido, email, foto };
+  return { id, nombre, apellido, email };
 }
 
 export default function AdminPerfil() {
@@ -81,7 +71,6 @@ export default function AdminPerfil() {
   const [info, setInfo] = useState("");
 
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "" });
-  const [fotoPreview, setFotoPreview] = useState("");
 
   const idAdminSync = useMemo(() => resolveAdminIdSync(), []);
 
@@ -129,8 +118,6 @@ export default function AdminPerfil() {
       }
 
       setForm({ nombre: norm.nombre, apellido: norm.apellido, email: norm.email });
-      setFotoPreview(norm.foto || "");
-      localStorage.setItem("userFoto", norm.foto || "");
     } catch (e) {
       if (e?.code === "AUTH") {
         navigate("/login", { replace: true });
@@ -151,6 +138,10 @@ export default function AdminPerfil() {
     loadMe();
   }, [loadMe]);
 
+  /* ========== Iniciales del admin ========== */
+  const getInitials = (nombre, apellido) =>
+    `${(nombre?.[0] || "").toUpperCase()}${(apellido?.[0] || "").toUpperCase()}`;
+
   return (
     <AppShell
       header={{ height: 56 }}
@@ -168,6 +159,7 @@ export default function AdminPerfil() {
       <AppShell.Main>
         <Paper p="lg" radius="md" withBorder pos="relative">
           <LoadingOverlay visible={loading} zIndex={1000} />
+
           <Stack gap="md">
             <Text fw={600} size="lg">
               Mi Perfil (Admin)
@@ -183,9 +175,11 @@ export default function AdminPerfil() {
               </Alert>
             )}
 
-            {/*Foto Admin */}
+            {/* Avatar con iniciales */}
             <Stack align="center" gap="md">
-              <Avatar src={fotoPreview} size={120} radius="100%" />
+              <Avatar color="#b67747ff" size={120} radius="100%">
+                {getInitials(form.nombre, form.apellido)}
+              </Avatar>
             </Stack>
 
             <Divider />

@@ -32,11 +32,12 @@ export default function Sidebar() {
   const [modalMessage, setModalMessage] = useState("");
 
   const userName = localStorage.getItem("userName") || "Usuario";
-  const userFoto = localStorage.getItem("userFoto"); // 1. Leemos la URL de la foto
-  const initials = userName ? userName[0].toUpperCase() : "";
-
   const role = (localStorage.getItem("role") || "").toLowerCase().trim();
   const isAdmin = role === "admin";
+
+  const userFoto = isAdmin ? null : localStorage.getItem("userFoto"); // 🔥 admin NO usa foto
+  const initials = userName ? userName[0].toUpperCase() : "";
+
 
   const doLogout = async () => {
     try {
@@ -64,15 +65,36 @@ export default function Sidebar() {
       }}
     >
     <ScrollArea type="never" style={{ flex: 1 }}>
+    
       <Box p="md">
         <Group align="center" gap="md" wrap="nowrap">
-          {/* 2. Pasamos la URL de la foto al Avatar */}
-          <Avatar src={userFoto} radius="xl" color="#b67747ff">
-            {initials} {/* Mantenemos las iniciales como fallback */}
-          </Avatar>
-          <Text size="sm" fw={600} truncate="end">
-            ¡Bienvenid@ {userName}!
-          </Text>
+          {isAdmin ? (
+            <Avatar radius="xl" color="#b67747ff">{initials}</Avatar>
+          ) : (
+            <Avatar src={userFoto} radius="xl" color="#b67747ff">{initials}</Avatar>
+          )}
+
+          <Box style={{ display: "flex", flexDirection: "column", maxWidth: 150, paddingBottom: 10 }}>
+            <Text size="sm" color="#885a37ff" fw={700}>
+              ¡Bienvenid@!
+            </Text>
+
+            <Text
+              size="sm"
+              fw={600}
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,       
+                WebkitBoxOrient: "vertical",
+                lineHeight: 1.2,
+                marginTop: 2,
+              }}
+            >
+              {userName}
+            </Text>
+          </Box>
         </Group>
 
           {isAdmin ? (
